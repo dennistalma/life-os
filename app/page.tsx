@@ -94,17 +94,17 @@ export default function Home() {
         {/* E-Mails - volle Breite, 2 Spalten */}
         {loaded && <EmailWidget />}
 
-        {/* Wix Shop - volle Breite */}
-        {loaded && <WixWidget />}
-
         {/* Etsy Shop - volle Breite */}
         {loaded && <EtsyWidget />}
 
-        {/* Instagram - volle Breite */}
-        {loaded && <InstagramWidget />}
+        {/* Wix Shop - volle Breite */}
+        {loaded && <WixWidget />}
 
         {/* TikTok - volle Breite */}
         {loaded && <TikTokWidget />}
+
+        {/* Instagram - volle Breite */}
+        {loaded && <InstagramWidget />}
 
         {/* Footer */}
         <div className="pt-4 border-t border-[#1f1f2e] flex items-center justify-between">
