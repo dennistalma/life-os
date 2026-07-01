@@ -38,15 +38,21 @@ Erstelle den optimalen Post. Antworte NUR als JSON:
   "seoScore": "1-10 wie gut SEO-optimiert"
 }`
 
-  const message = await client.messages.create({
-    model: 'claude-sonnet-5',
-    max_tokens: 800,
-    messages: [{ role: 'user', content: prompt }],
-  })
+  try {
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }],
+    })
 
-  const text = message.content[0].type === 'text' ? message.content[0].text : ''
-  const match = text.match(/\{[\s\S]*\}/)
-  if (!match) return NextResponse.json({ error: 'Keine Antwort' }, { status: 500 })
+    const text = message.content[0].type === 'text' ? message.content[0].text : ''
+    const match = text.match(/\{[\s\S]*\}/)
+    if (!match) return NextResponse.json({ error: 'KI hat kein gültiges JSON zurückgegeben' }, { status: 500 })
 
-  return NextResponse.json(JSON.parse(match[0]))
+    return NextResponse.json(JSON.parse(match[0]))
+  } catch (err) {
+    console.error('generate-post error:', err)
+    const msg = err instanceof Error ? err.message : 'Unbekannter Fehler'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }
