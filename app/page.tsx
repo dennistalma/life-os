@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { AppData } from '@/lib/types'
 import SmartCapture from '@/components/SmartCapture'
+import ReceiptCapture from '@/components/ReceiptCapture'
 import TodoWidget from '@/components/TodoWidget'
 import DashboardCalendar from '@/components/DashboardCalendar'
 import InstagramWidget from '@/components/InstagramWidget'
@@ -25,7 +26,7 @@ function getGreeting(name: string): string {
 }
 
 const defaultData: AppData = {
-  todos: [], events: [], transactions: [], habits: [], goals: [], userName: 'Dennis', social: [], notes: [],
+  todos: [], events: [], transactions: [], habits: [], goals: [], userName: 'Dennis', social: [], notes: [], receipts: [],
 }
 
 export default function Home() {
@@ -83,6 +84,15 @@ export default function Home() {
             <span className="text-xs font-medium text-orange-400/80 uppercase tracking-widest">Smart Capture</span>
           </div>
           <SmartCapture onDataUpdate={handleUpdate} />
+        </div>
+
+        {/* Beleg-Erfassung */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="w-px h-4 bg-cyan-500/50" />
+            <span className="text-xs font-medium text-cyan-400/80 uppercase tracking-widest">Belege</span>
+          </div>
+          <ReceiptCapture onDataUpdate={handleUpdate} />
         </div>
 
         {/* Umsatz-Überblick */}

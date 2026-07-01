@@ -11,6 +11,7 @@ const defaultData: AppData = {
   userName: 'Dennis',
   social: [],
   notes: [],
+  receipts: [],
 }
 
 // ── File-based storage (local dev) ──────────────────────────────────────────
