@@ -15,6 +15,7 @@ export interface CalendarEvent {
   title: string
   date: string
   time?: string
+  duration?: number // minutes
   description?: string
   createdAt?: string
   source?: 'local' | 'google'

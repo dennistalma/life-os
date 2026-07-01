@@ -18,7 +18,7 @@ Antworte NUR mit einem validen JSON-Objekt in diesem Format:
   "reasoning": "<kurze Begründung auf Deutsch>",
   "data": {
     // Für todo: { "text": "...", "priority": "high|medium|low", "dueDate": "YYYY-MM-DD oder null" }
-    // Für calendar: { "title": "...", "date": "YYYY-MM-DD", "time": "HH:MM oder null", "description": "... oder null" }
+    // Für calendar: { "title": "...", "date": "YYYY-MM-DD", "time": "HH:MM oder null", "duration": <Dauer in Minuten oder null>, "description": "... oder null" }
     // Für finance: { "description": "...", "amount": <zahl>, "type": "income|expense", "category": "..." }
     // Für habit: { "name": "...", "frequency": "daily|weekly" }
     // Für goal: { "title": "...", "description": "...", "deadline": "YYYY-MM-DD oder null", "timeframe": "week|month|quarter|year|custom", "target": <zahl oder null>, "unit": "... oder null" }
@@ -71,6 +71,7 @@ export async function classifyInput(
       title: d.title || input,
       date: d.date || today,
       time: d.time || undefined,
+      duration: d.duration ? Number(d.duration) : undefined,
       description: d.description || undefined,
     }
   } else if (category === 'finance') {
