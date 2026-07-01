@@ -59,8 +59,8 @@ function PostPageInner() {
         const data = await res.json()
         if (data.description) {
           setImageDesc(data.description)
-          // Auto-generate right after image is analyzed
-          setTimeout(() => generate(), 200)
+          // Pass description directly — state not yet flushed
+          generate(data.description)
         }
       } catch {
         // silent
@@ -71,14 +71,14 @@ function PostPageInner() {
     reader.readAsDataURL(file)
   }
 
-  async function generate() {
+  async function generate(descOverride?: string) {
     setLoading(true)
     setErrorMsg('')
     try {
       const res = await fetch('/api/social/generate-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platform, brief, imageContext: imageDesc }),
+        body: JSON.stringify({ platform, brief, imageContext: descOverride ?? imageDesc }),
       })
       const data = await res.json()
       if (!res.ok) {
