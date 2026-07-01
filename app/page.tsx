@@ -11,6 +11,7 @@ import GoalWidget from '@/components/GoalWidget'
 import SocialWidget from '@/components/SocialWidget'
 import WixWidget from '@/components/WixWidget'
 import EmailWidget from '@/components/EmailWidget'
+import EtsyWidget from '@/components/EtsyWidget'
 
 function getGreeting(name: string): string {
   const h = new Date().getHours()
@@ -97,6 +98,9 @@ export default function Home() {
 
         {/* Wix Shop - volle Breite */}
         {loaded && <WixWidget />}
+
+        {/* Etsy Shop - volle Breite */}
+        {loaded && <EtsyWidget />}
 
         {/* Grid */}
         {loaded && (
