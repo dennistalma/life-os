@@ -13,7 +13,7 @@ interface Props {
   events: CalendarEvent[]
 }
 
-const HOURS = Array.from({ length: 17 }, (_, i) => i + 7) // 7:00 - 23:00
+const HOURS = Array.from({ length: 13 }, (_, i) => i + 8) // 8:00 - 20:00
 
 export default function DashboardCalendar({ events }: Props) {
   const [current, setCurrent] = useState(new Date())

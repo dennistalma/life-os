@@ -91,9 +91,11 @@ export default function Home() {
         {/* Nächste Termine */}
         {loaded && <UpcomingEvents localEvents={data.events} />}
 
-        {/* Kalender oben - volle Breite */}
+        {/* Kalender - sticky */}
         {loaded && (
-          <DashboardCalendar events={data.events} />
+          <div className="sticky top-0 z-20 bg-[#0a0a0f] pb-2">
+            <DashboardCalendar events={data.events} />
+          </div>
         )}
 
         {/* To-Dos - volle Breite */}
