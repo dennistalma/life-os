@@ -2,11 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Receipt, ExternalLink } from 'lucide-react'
+import { LayoutDashboard, ExternalLink } from 'lucide-react'
 
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard, external: false },
-  { href: '/eur', label: 'EÜR', icon: Receipt, external: false },
   { href: 'https://euer-app.vercel.app', label: 'EÜR-App', icon: ExternalLink, external: true },
 ]
 
@@ -26,7 +25,7 @@ export default function NavBar() {
           }`
           if (external) {
             return (
-              <a key={href} href={href} target="_blank" rel="noopener noreferrer" className={className}>
+              <a key={href} href={href} className={className}>
                 <Icon className="w-3.5 h-3.5" />
                 {label}
               </a>
