@@ -116,8 +116,6 @@ export default function Home() {
         {/* Google Analytics */}
         {loaded && <AnalyticsWidget />}
 
-        {/* Post Creator */}
-
         {/* TikTok - volle Breite */}
         {loaded && <TikTokWidget />}
 
