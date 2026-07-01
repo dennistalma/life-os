@@ -2,7 +2,9 @@ import fs from 'fs'
 import path from 'path'
 import { AppData } from './types'
 
-const DATA_FILE = path.join(process.cwd(), 'data', 'life-os.json')
+const DATA_FILE = process.env.NODE_ENV === 'production'
+  ? '/tmp/life-os.json'
+  : path.join(process.cwd(), 'data', 'life-os.json')
 
 const defaultData: AppData = {
   todos: [],
