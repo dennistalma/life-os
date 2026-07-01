@@ -5,9 +5,6 @@ import { AppData } from '@/lib/types'
 import SmartCapture from '@/components/SmartCapture'
 import TodoWidget from '@/components/TodoWidget'
 import DashboardCalendar from '@/components/DashboardCalendar'
-import FinanceWidget from '@/components/FinanceWidget'
-import HabitWidget from '@/components/HabitWidget'
-import GoalWidget from '@/components/GoalWidget'
 import SocialWidget from '@/components/SocialWidget'
 import WixWidget from '@/components/WixWidget'
 import EmailWidget from '@/components/EmailWidget'
@@ -102,18 +99,9 @@ export default function Home() {
         {/* Etsy Shop - volle Breite */}
         {loaded && <EtsyWidget />}
 
-        {/* Grid */}
+        {/* Social - volle Breite */}
         {loaded && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-4">
-              <HabitWidget habits={data.habits} onUpdate={handlePartialUpdate} />
-              <GoalWidget goals={data.goals} />
-            </div>
-            <div className="space-y-4">
-              <FinanceWidget transactions={data.transactions} />
-              <SocialWidget accounts={data.social || []} onUpdate={(social) => handlePartialUpdate({ social })} />
-            </div>
-          </div>
+          <SocialWidget accounts={data.social || []} onUpdate={(social) => handlePartialUpdate({ social })} />
         )}
 
         {/* Footer */}
