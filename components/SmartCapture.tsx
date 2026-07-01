@@ -1,8 +1,26 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Sparkles, Loader2, CheckCircle, AlertCircle, ChevronRight } from 'lucide-react'
 import { AppData, CaptureResult, Category } from '@/lib/types'
+
+const POST_PATTERNS = [
+  /post\w*.*instagram/i, /instagram.*post/i,
+  /post\w*.*tiktok/i, /tiktok.*post/i,
+  /bild.*posten/i, /posten.*bild/i,
+  /video.*posten/i, /posten.*video/i,
+  /instagram.*bild/i, /instagram.*video/i,
+  /social.media.*post/i,
+]
+
+function detectPostIntent(text: string): { match: boolean; platform: string; brief: string } {
+  const lower = text.toLowerCase()
+  const match = POST_PATTERNS.some(p => p.test(lower))
+  const platform = /tiktok/i.test(lower) ? 'tiktok' : 'instagram'
+  const brief = text
+  return { match, platform, brief }
+}
 
 const CATEGORY_LABELS: Record<Category, { label: string; color: string; emoji: string }> = {
   todo: { label: 'To-Do', color: 'text-amber-400', emoji: '✓' },
@@ -25,6 +43,7 @@ interface Props {
 }
 
 export default function SmartCapture({ onDataUpdate }: Props) {
+  const router = useRouter()
   const [input, setInput] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [lastResult, setLastResult] = useState<CaptureResult | null>(null)
@@ -42,6 +61,14 @@ export default function SmartCapture({ onDataUpdate }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!input.trim() || status === 'loading') return
+
+    // Check for post intent first
+    const postIntent = detectPostIntent(input.trim())
+    if (postIntent.match) {
+      router.push(`/post?platform=${postIntent.platform}&brief=${encodeURIComponent(postIntent.brief)}`)
+      setInput('')
+      return
+    }
 
     setStatus('loading')
     setLastResult(null)

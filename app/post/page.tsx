@@ -1,0 +1,211 @@
+'use client'
+
+import { useState, useRef, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Upload, Sparkles, Copy, ExternalLink, RefreshCw, X, ArrowLeft, Settings } from 'lucide-react'
+import Image from 'next/image'
+import Link from 'next/link'
+
+type Platform = 'instagram' | 'tiktok'
+
+function PostPageInner() {
+  const searchParams = useSearchParams()
+  const [platform, setPlatform] = useState<Platform>((searchParams.get('platform') as Platform) || 'instagram')
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [brief, setBrief] = useState(searchParams.get('brief') || '')
+  const [caption, setCaption] = useState('')
+  const [hashtags, setHashtags] = useState<string[]>([])
+  const [hook, setHook] = useState('')
+  const [cta, setCta] = useState('')
+  const [seoScore, setSeoScore] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [hasKB, setHasKB] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    fetch('/api/social/kb').then(r => r.json()).then(kb => {
+      setHasKB(!!(kb.brandName || kb.instagramHashtags?.length))
+    })
+  }, [])
+
+  function handleFile(file: File) {
+    setImageUrl(URL.createObjectURL(file))
+    setCaption(''); setHashtags([]); setHook(''); setCta('')
+  }
+
+  async function generate() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/social/generate-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform, brief }),
+      })
+      const data = await res.json()
+      setCaption(data.caption || '')
+      setHashtags(data.hashtags || [])
+      setHook(data.hook || '')
+      setCta(data.cta || '')
+      setSeoScore(data.seoScore || '')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function copyAll() {
+    const text = `${caption}\n\n${hashtags.map(h => `#${h.replace('#', '')}`).join(' ')}`
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  function openPlatform() {
+    copyAll()
+    window.open(platform === 'instagram' ? 'https://www.instagram.com/create/style/' : 'https://www.tiktok.com/upload', '_blank')
+  }
+
+  const fullText = caption + (hashtags.length ? '\n\n' + hashtags.map(h => `#${h.replace('#', '')}`).join(' ') : '')
+
+  return (
+    <main className="min-h-screen bg-[#0a0a0f]">
+      <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="text-slate-500 hover:text-slate-300 transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <h1 className="text-xl font-semibold text-slate-100 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-pink-400" /> Post erstellen
+            </h1>
+          </div>
+          <div className="flex items-center gap-3">
+            {!hasKB && (
+              <Link href="/social-settings" className="text-xs text-yellow-400 hover:text-yellow-300 flex items-center gap-1">
+                <Settings className="w-3.5 h-3.5" /> Wissensdatenbank einrichten
+              </Link>
+            )}
+            <div className="flex rounded-lg overflow-hidden border border-white/10">
+              {(['instagram', 'tiktok'] as Platform[]).map(p => (
+                <button key={p} onClick={() => setPlatform(p)}
+                  className={`px-4 py-1.5 text-sm transition-colors ${platform === p ? 'bg-pink-500/20 text-pink-300' : 'text-slate-500 hover:text-slate-300'}`}>
+                  {p === 'instagram' ? '📸 Instagram' : '♪ TikTok'}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Left */}
+          <div className="space-y-4">
+            <div
+              onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
+              onDragOver={e => e.preventDefault()}
+              onClick={() => fileRef.current?.click()}
+              className="relative border-2 border-dashed border-white/10 rounded-2xl cursor-pointer hover:border-pink-500/40 transition-colors overflow-hidden bg-black/20"
+              style={{ minHeight: 260 }}
+            >
+              {imageUrl ? (
+                <>
+                  <Image src={imageUrl} alt="Vorschau" fill className="object-contain" unoptimized />
+                  <button onClick={e => { e.stopPropagation(); setImageUrl(null) }}
+                    className="absolute top-3 right-3 bg-black/60 rounded-full p-1.5 hover:bg-black/80 z-10">
+                    <X className="w-4 h-4 text-white" />
+                  </button>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full py-16 gap-3">
+                  <Upload className="w-8 h-8 text-slate-600" />
+                  <p className="text-sm text-slate-600">Bild oder Video hochladen</p>
+                  <p className="text-xs text-slate-700">Drag & Drop oder klicken</p>
+                </div>
+              )}
+            </div>
+            <input ref={fileRef} type="file" accept="image/*,video/*" className="hidden"
+              onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
+
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Was soll der Post zeigen?</label>
+              <textarea value={brief} onChange={e => setBrief(e.target.value)}
+                placeholder="z.B. Neue Eichen-Hängelampe, perfekt für gemütliche Wohnzimmer..."
+                rows={3}
+                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-pink-500/50 resize-none" />
+            </div>
+
+            <button onClick={generate} disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 rounded-xl text-sm font-medium transition-colors disabled:opacity-40">
+              {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {loading ? 'Generiere optimalen Post...' : 'Post generieren'}
+            </button>
+          </div>
+
+          {/* Right */}
+          <div className="space-y-4">
+            {hook && (
+              <div className="bg-pink-500/10 border border-pink-500/20 rounded-xl px-4 py-3">
+                <p className="text-[10px] text-pink-500/70 uppercase tracking-wider mb-1">Hook</p>
+                <p className="text-sm text-pink-200">{hook}</p>
+              </div>
+            )}
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs text-slate-500">Caption</label>
+                {seoScore && <span className="text-[10px] text-green-400">SEO Score: {seoScore}/10</span>}
+              </div>
+              <textarea value={caption} onChange={e => setCaption(e.target.value)}
+                placeholder="Caption erscheint hier nach der Generierung..."
+                rows={8}
+                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-pink-500/50 resize-none" />
+            </div>
+
+            {hashtags.length > 0 && (
+              <div>
+                <p className="text-xs text-slate-500 mb-2">Hashtags ({hashtags.length})</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {hashtags.map((tag, i) => (
+                    <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-pink-500/10 text-pink-400 border border-pink-500/20">
+                      #{tag.replace('#', '')}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {cta && (
+              <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl px-4 py-3">
+                <p className="text-[10px] text-cyan-500/70 uppercase tracking-wider mb-1">Call-to-Action</p>
+                <p className="text-sm text-cyan-200">{cta}</p>
+              </div>
+            )}
+
+            {fullText.trim() && (
+              <div className="flex gap-3 pt-2">
+                <button onClick={copyAll}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl text-sm transition-colors">
+                  <Copy className="w-4 h-4" />
+                  {copied ? '✓ Kopiert!' : 'Alles kopieren'}
+                </button>
+                <button onClick={openPlatform}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 rounded-xl text-sm font-medium transition-colors">
+                  <ExternalLink className="w-4 h-4" />
+                  {platform === 'instagram' ? '→ Instagram' : '→ TikTok'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </main>
+  )
+}
+
+export default function PostPage() {
+  return (
+    <Suspense>
+      <PostPageInner />
+    </Suspense>
+  )
+}
