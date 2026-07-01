@@ -8,6 +8,7 @@ import TodoWidget from '@/components/TodoWidget'
 import DashboardCalendar from '@/components/DashboardCalendar'
 import InstagramWidget from '@/components/InstagramWidget'
 import TikTokWidget from '@/components/TikTokWidget'
+import PostCreator from '@/components/PostCreator'
 import NotesWidget from '@/components/NotesWidget'
 import RevenueOverview from '@/components/RevenueOverview'
 import AnalyticsWidget from '@/components/AnalyticsWidget'
@@ -115,6 +116,9 @@ export default function Home() {
 
         {/* Google Analytics */}
         {loaded && <AnalyticsWidget />}
+
+        {/* Post Creator */}
+        {loaded && <PostCreator />}
 
         {/* TikTok - volle Breite */}
         {loaded && <TikTokWidget />}
