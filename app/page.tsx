@@ -5,7 +5,8 @@ import { AppData } from '@/lib/types'
 import SmartCapture from '@/components/SmartCapture'
 import TodoWidget from '@/components/TodoWidget'
 import DashboardCalendar from '@/components/DashboardCalendar'
-import SocialWidget from '@/components/SocialWidget'
+import InstagramWidget from '@/components/InstagramWidget'
+import TikTokWidget from '@/components/TikTokWidget'
 import WixWidget from '@/components/WixWidget'
 import EmailWidget from '@/components/EmailWidget'
 import EtsyWidget from '@/components/EtsyWidget'
@@ -99,10 +100,11 @@ export default function Home() {
         {/* Etsy Shop - volle Breite */}
         {loaded && <EtsyWidget />}
 
-        {/* Social - volle Breite */}
-        {loaded && (
-          <SocialWidget accounts={data.social || []} onUpdate={(social) => handlePartialUpdate({ social })} />
-        )}
+        {/* Instagram - volle Breite */}
+        {loaded && <InstagramWidget />}
+
+        {/* TikTok - volle Breite */}
+        {loaded && <TikTokWidget />}
 
         {/* Footer */}
         <div className="pt-4 border-t border-[#1f1f2e] flex items-center justify-between">
