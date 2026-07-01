@@ -25,7 +25,7 @@ function getGreeting(name: string): string {
 }
 
 const defaultData: AppData = {
-  todos: [], events: [], transactions: [], habits: [], goals: [], userName: 'Dennis', social: [],
+  todos: [], events: [], transactions: [], habits: [], goals: [], userName: 'Dennis', social: [], notes: [],
 }
 
 export default function Home() {

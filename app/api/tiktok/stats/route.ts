@@ -22,7 +22,7 @@ export async function GET() {
       followers: user.follower_count ?? account.stats?.followers ?? 0,
       following: user.following_count ?? account.stats?.following ?? 0,
       posts: user.video_count ?? account.stats?.posts ?? 0,
-      likes: user.likes_count ?? (account.stats as Record<string, number>)?.likes ?? 0,
+      likes: user.likes_count ?? (account.stats as unknown as Record<string, number>)?.likes ?? 0,
       updatedAt: new Date().toISOString(),
     }
 
