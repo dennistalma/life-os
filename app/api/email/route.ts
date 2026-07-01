@@ -43,6 +43,7 @@ export async function GET() {
         bodyParts: ['1'],
       })) {
         const env = msg.envelope
+        if (!env) continue
         const fromAddr = env.from?.[0]
         const fromStr = fromAddr?.name
           ? `${fromAddr.name} <${fromAddr.address}>`
