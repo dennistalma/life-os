@@ -42,12 +42,11 @@ export async function GET() {
         bodyStructure: true,
         bodyParts: ['1'],
       })) {
-        const env = msg.envelope
-        if (!env) continue
-        const fromAddr = env.from?.[0]
+        if (!msg.envelope) continue
+        const fromAddr = msg.envelope.from?.[0]
         const fromStr = fromAddr?.name
           ? `${fromAddr.name} <${fromAddr.address}>`
-          : fromAddr?.address || 'Unbekannt'
+          : (fromAddr?.address ?? 'Unbekannt')
 
         let preview = ''
         try {
@@ -61,9 +60,9 @@ export async function GET() {
 
         messages.push({
           id: String(msg.uid),
-          subject: env.subject || '(Kein Betreff)',
+          subject: msg.envelope.subject ?? '(Kein Betreff)',
           from: fromStr,
-          date: env.date?.toISOString() || new Date().toISOString(),
+          date: msg.envelope.date?.toISOString() ?? new Date().toISOString(),
           read: msg.flags?.has('\\Seen') || false,
           preview,
         })
