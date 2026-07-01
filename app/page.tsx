@@ -85,15 +85,6 @@ export default function Home() {
           <SmartCapture onDataUpdate={handleUpdate} />
         </div>
 
-        {/* Beleg-Erfassung */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <div className="w-px h-4 bg-cyan-500/50" />
-            <span className="text-xs font-medium text-cyan-400/80 uppercase tracking-widest">Belege</span>
-          </div>
-          <ReceiptCapture onDataUpdate={handleUpdate} />
-        </div>
-
         {/* Umsatz-Überblick */}
         {loaded && <RevenueOverview />}
 
@@ -105,8 +96,13 @@ export default function Home() {
           <TodoWidget todos={data.todos} onUpdate={handlePartialUpdate} />
         )}
 
-        {/* Notizen */}
-        {loaded && <NotesWidget />}
+        {/* Notizen (links) + Belege (rechts) */}
+        {loaded && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <NotesWidget />
+            <ReceiptCapture onDataUpdate={handleUpdate} />
+          </div>
+        )}
 
         {/* E-Mails - volle Breite, 2 Spalten */}
         {loaded && <EmailWidget />}
