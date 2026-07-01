@@ -6,7 +6,7 @@ export async function GET() {
   if (!clientKey) {
     return NextResponse.json({ error: 'TIKTOK_CLIENT_KEY nicht konfiguriert' }, { status: 500 })
   }
-  const redirectUri = `http://127.0.0.1:3000/api/auth/tiktok/callback`
+  const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/tiktok/callback`
   const csrfState = crypto.randomBytes(16).toString('hex')
   const scope = 'user.info.basic,user.info.stats'
 
