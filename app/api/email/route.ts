@@ -80,7 +80,7 @@ export async function GET() {
     return NextResponse.json({ messages, total: messages.length })
   } catch (err) {
     try { await client.logout() } catch {}
-    const msg = err instanceof Error ? `${err.message} | ${(err as Record<string,unknown>).response || ''}` : 'IMAP Fehler'
+    const msg = err instanceof Error ? err.message : 'IMAP Fehler'
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
