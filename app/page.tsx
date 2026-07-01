@@ -98,9 +98,6 @@ export default function Home() {
         {/* Umsatz-Überblick */}
         {loaded && <RevenueOverview />}
 
-        {/* Nächste Termine */}
-        {loaded && <UpcomingEvents localEvents={data.events} />}
-
         {/* Kalender - volle Höhe */}
         {loaded && <DashboardCalendar events={data.events} />}
 
