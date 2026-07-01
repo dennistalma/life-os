@@ -90,7 +90,7 @@ export default function DashboardCalendar({ events }: Props) {
       </div>
 
       {/* Time grid */}
-      <div className="overflow-y-auto max-h-[420px] space-y-0">
+      <div className="space-y-0">
         {HOURS.map(hour => (
           <div key={hour} className="grid grid-cols-8 border-t border-white/5 min-h-[44px]">
             <div className="text-[10px] text-slate-700 px-2 pt-1 select-none">
