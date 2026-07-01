@@ -87,6 +87,14 @@ export interface SocialAccount {
   recentPosts?: SocialPost[]
 }
 
+export interface Note {
+  id: string
+  text: string
+  color: 'yellow' | 'cyan' | 'pink' | 'green' | 'default'
+  createdAt: string
+  updatedAt: string
+}
+
 export interface AppData {
   todos: Todo[]
   events: CalendarEvent[]
@@ -95,6 +103,7 @@ export interface AppData {
   goals: Goal[]
   userName: string
   social: SocialAccount[]
+  notes: Note[]
 }
 
 export interface CaptureResult {

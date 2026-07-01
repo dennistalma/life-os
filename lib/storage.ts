@@ -12,6 +12,7 @@ const defaultData: AppData = {
   goals: [],
   userName: 'Dennis',
   social: [],
+  notes: [],
 }
 
 export function readData(): AppData {

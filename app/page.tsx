@@ -7,6 +7,10 @@ import TodoWidget from '@/components/TodoWidget'
 import DashboardCalendar from '@/components/DashboardCalendar'
 import InstagramWidget from '@/components/InstagramWidget'
 import TikTokWidget from '@/components/TikTokWidget'
+import NotesWidget from '@/components/NotesWidget'
+import RevenueOverview from '@/components/RevenueOverview'
+import UpcomingEvents from '@/components/UpcomingEvents'
+import AnalyticsWidget from '@/components/AnalyticsWidget'
 import WixWidget from '@/components/WixWidget'
 import EmailWidget from '@/components/EmailWidget'
 import EtsyWidget from '@/components/EtsyWidget'
@@ -81,6 +85,12 @@ export default function Home() {
           <SmartCapture onDataUpdate={handleUpdate} />
         </div>
 
+        {/* Umsatz-Überblick */}
+        {loaded && <RevenueOverview />}
+
+        {/* Nächste Termine */}
+        {loaded && <UpcomingEvents localEvents={data.events} />}
+
         {/* Kalender oben - volle Breite */}
         {loaded && (
           <DashboardCalendar events={data.events} />
@@ -91,6 +101,9 @@ export default function Home() {
           <TodoWidget todos={data.todos} onUpdate={handlePartialUpdate} />
         )}
 
+        {/* Notizen */}
+        {loaded && <NotesWidget />}
+
         {/* E-Mails - volle Breite, 2 Spalten */}
         {loaded && <EmailWidget />}
 
@@ -99,6 +112,9 @@ export default function Home() {
 
         {/* Wix Shop - volle Breite */}
         {loaded && <WixWidget />}
+
+        {/* Google Analytics */}
+        {loaded && <AnalyticsWidget />}
 
         {/* TikTok - volle Breite */}
         {loaded && <TikTokWidget />}
