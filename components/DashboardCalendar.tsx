@@ -13,7 +13,7 @@ interface Props {
 
 const START_HOUR = 8
 const END_HOUR = 20
-const ROW_HEIGHT = 48 // px per hour
+const ROW_HEIGHT = 64 // px per hour
 const TOTAL_HEIGHT = (END_HOUR - START_HOUR) * ROW_HEIGHT
 const HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => i + START_HOUR)
 
