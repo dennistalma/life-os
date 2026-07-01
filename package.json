@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",
+    "@upstash/redis": "^1.38.0",
     "date-fns": "^3.6.0",
     "imapflow": "^1.4.3",
     "lucide-react": "^0.400.0",

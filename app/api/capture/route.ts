@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { classifyInput } from '@/lib/classifier'
-import { updateData } from '@/lib/storage'
+import { updateDataAsync } from '@/lib/storage'
 import { Category } from '@/lib/types'
 
 export async function POST(req: NextRequest) {
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     const today = new Date().toISOString().split('T')[0]
     const result = await classifyInput(input.trim(), today)
 
-    const updatedData = updateData((data) => {
+    const updatedData = await updateDataAsync((data) => {
       const category: Category = result.category
       if (category === 'todo') {
         data.todos = [result.data as never, ...data.todos]
