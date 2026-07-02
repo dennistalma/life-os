@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ArrowLeft, RefreshCw, ShoppingBag, Package, ExternalLink } from 'lucide-react'
+import { ArrowLeft, RefreshCw, ShoppingBag, Package, ExternalLink, Truck, Check, ChevronDown, ChevronUp } from 'lucide-react'
 import Link from 'next/link'
 
 interface Order {
@@ -9,11 +9,13 @@ interface Order {
   platform: 'wix' | 'etsy' | 'email'
   orderNumber: string
   customer: string
+  customerEmail?: string
   product: string
   amount: number
   currency: string
   status: string
   date: string
+  shippingDeadline?: string
   link?: string
 }
 
@@ -33,32 +35,195 @@ const PLATFORM_STYLE = {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  'Versandt': 'text-green-400',
-  'Bestätigt': 'text-cyan-400',
-  'Ausstehend': 'text-yellow-400',
-  'Storniert': 'text-red-400',
-  'Teilversandt': 'text-orange-400',
-  'Neu': 'text-pink-400',
+  'Versandt': 'text-green-400', 'Bestätigt': 'text-cyan-400',
+  'Ausstehend': 'text-yellow-400', 'Storniert': 'text-red-400',
+  'Teilversandt': 'text-orange-400', 'Neu': 'text-pink-400',
 }
 
 function fmt(amount: number, currency = 'EUR') {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(amount)
 }
 
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const h = Math.floor(diff / 3600000)
-  const d = Math.floor(diff / 86400000)
-  if (d > 0) return `vor ${d}d`
-  if (h > 0) return `vor ${h}h`
-  return 'gerade eben'
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString('de-DE', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
+function OrderRow({ order, onFulfilled }: { order: Order; onFulfilled: (id: string) => void }) {
+  const [expanded, setExpanded] = useState(false)
+  const [tracking, setTracking] = useState('')
+  const [carrier, setCarrier] = useState('DHL')
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(order.status === 'Versandt')
+  const [error, setError] = useState('')
+
+  const p = PLATFORM_STYLE[order.platform]
+  const statusColor = STATUS_COLOR[order.status] || 'text-slate-400'
+
+  async function fulfill() {
+    if (!tracking.trim() && order.platform === 'wix') {
+      setError('Bitte Sendungsnummer eingeben')
+      return
+    }
+    setSending(true)
+    setError('')
+    try {
+      const res = await fetch('/api/orders/fulfill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: order.id,
+          platform: order.platform,
+          trackingNumber: tracking,
+          carrier,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Fehler beim Versenden')
+      } else {
+        setSent(true)
+        setExpanded(false)
+        onFulfilled(order.id)
+      }
+    } catch {
+      setError('Netzwerkfehler')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div className={`card-base transition-all ${sent ? 'opacity-60' : ''}`}>
+      {/* Main row */}
+      <div className="p-4 flex items-center gap-3">
+        {/* Versandt-Haken */}
+        <button
+          onClick={() => sent ? null : setExpanded(!expanded)}
+          className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+            sent
+              ? 'bg-green-500 border-green-500'
+              : 'border-slate-600 hover:border-green-500'
+          }`}
+        >
+          {sent && <Check className="w-3.5 h-3.5 text-white" />}
+        </button>
+
+        {/* Platform */}
+        <span className={`flex-shrink-0 text-xs px-2.5 py-0.5 rounded-full border ${p.bg} ${p.text} ${p.border} font-medium`}>
+          {p.label}
+        </span>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium text-slate-200">{order.customer}</span>
+            <span className="text-xs text-slate-600">#{order.orderNumber}</span>
+          </div>
+          <p className="text-xs text-slate-500 truncate">{order.product}</p>
+        </div>
+
+        {/* Amount + status */}
+        <div className="text-right flex-shrink-0">
+          <p className="text-sm font-semibold text-slate-200">
+            {order.amount > 0 ? fmt(order.amount, order.currency) : '—'}
+          </p>
+          <p className={`text-xs ${sent ? 'text-green-400' : statusColor}`}>
+            {sent ? 'Versandt ✓' : order.status}
+          </p>
+        </div>
+
+        {/* Date */}
+        <span className="text-xs text-slate-600 flex-shrink-0 hidden md:block">
+          {formatDate(order.date)}
+        </span>
+
+        {/* External link */}
+        {order.link && (
+          <a href={order.link} target="_blank" rel="noopener noreferrer"
+            className="flex-shrink-0 text-slate-600 hover:text-slate-300 transition-colors">
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        )}
+
+        {/* Expand */}
+        {!sent && (
+          <button onClick={() => setExpanded(!expanded)}
+            className="flex-shrink-0 text-slate-600 hover:text-slate-300 transition-colors">
+            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+        )}
+      </div>
+
+      {/* Expanded: shipping form */}
+      {expanded && !sent && (
+        <div className="border-t border-white/5 px-4 pb-4 pt-3 space-y-3">
+          <div className="grid grid-cols-2 gap-3 text-xs text-slate-500">
+            <div>
+              <span className="text-slate-600">Bestellnummer:</span>
+              <span className="ml-2 text-slate-300">#{order.orderNumber}</span>
+            </div>
+            <div>
+              <span className="text-slate-600">Artikel:</span>
+              <span className="ml-2 text-slate-300">{order.product}</span>
+            </div>
+            <div>
+              <span className="text-slate-600">Bestellt am:</span>
+              <span className="ml-2 text-slate-300">{formatDate(order.date)}</span>
+            </div>
+            <div>
+              <span className="text-slate-600">Betrag:</span>
+              <span className="ml-2 text-slate-300">{fmt(order.amount, order.currency)}</span>
+            </div>
+          </div>
+
+          {order.platform === 'etsy' ? (
+            <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl px-4 py-3 text-xs text-orange-300">
+              Etsy API noch nicht freigegeben — bitte manuell auf Etsy als versandt markieren.
+              <a href="https://www.etsy.com/your/orders/sold" target="_blank" rel="noopener noreferrer"
+                className="ml-2 underline">Etsy öffnen →</a>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <select value={carrier} onChange={e => setCarrier(e.target.value)}
+                  className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-orange-500/40 flex-shrink-0">
+                  <option value="DHL">DHL</option>
+                  <option value="Hermes">Hermes</option>
+                  <option value="DPD">DPD</option>
+                  <option value="GLS">GLS</option>
+                  <option value="UPS">UPS</option>
+                  <option value="Deutsche Post">Deutsche Post</option>
+                  <option value="Other">Sonstiger</option>
+                </select>
+                <input
+                  value={tracking}
+                  onChange={e => setTracking(e.target.value)}
+                  placeholder="Sendungsnummer eingeben..."
+                  className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-orange-500/40"
+                />
+              </div>
+              {error && <p className="text-xs text-red-400">{error}</p>}
+              <button onClick={fulfill} disabled={sending}
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-xl text-sm font-medium transition-colors disabled:opacity-40">
+                {sending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />}
+                {sending ? 'Wird versendet...' : 'Als versandt markieren + Tracking senden'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'wix' | 'etsy'>('all')
+  const [filter, setFilter] = useState<'all' | 'wix' | 'etsy' | 'open'>('open')
 
   useEffect(() => { load() }, [])
 
@@ -74,13 +239,21 @@ export default function OrdersPage() {
     }
   }
 
-  const filtered = filter === 'all' ? orders : orders.filter(o => o.platform === filter)
+  function handleFulfilled(id: string) {
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'Versandt' } : o))
+  }
+
+  const filtered = orders.filter(o => {
+    if (filter === 'open') return o.status !== 'Versandt' && o.status !== 'Storniert'
+    if (filter === 'wix') return o.platform === 'wix'
+    if (filter === 'etsy') return o.platform === 'etsy'
+    return true
+  })
 
   return (
     <main className="min-h-screen bg-[#0a0a0f]">
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
 
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="text-slate-500 hover:text-slate-300 transition-colors">
@@ -97,7 +270,6 @@ export default function OrdersPage() {
           </button>
         </div>
 
-        {/* Stats */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="card-base p-4">
@@ -123,17 +295,15 @@ export default function OrdersPage() {
           </div>
         )}
 
-        {/* Filter */}
         <div className="flex gap-2">
-          {(['all', 'wix', 'etsy'] as const).map(f => (
+          {(['open', 'all', 'wix', 'etsy'] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)}
               className={`px-4 py-1.5 rounded-lg text-sm transition-colors ${filter === f ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' : 'text-slate-500 hover:text-slate-300 bg-white/5'}`}>
-              {f === 'all' ? 'Alle' : f === 'wix' ? 'Wix' : 'Etsy'}
+              {f === 'open' ? 'Offen' : f === 'all' ? 'Alle' : f === 'wix' ? 'Wix' : 'Etsy'}
             </button>
           ))}
         </div>
 
-        {/* Orders list */}
         {loading ? (
           <div className="flex items-center justify-center py-20 text-slate-500">
             <RefreshCw className="w-5 h-5 animate-spin mr-2" /> Lade Bestellungen...
@@ -141,54 +311,13 @@ export default function OrdersPage() {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-600 gap-2">
             <ShoppingBag className="w-10 h-10" />
-            <p>Keine Bestellungen gefunden</p>
+            <p>Keine offenen Bestellungen</p>
           </div>
         ) : (
           <div className="space-y-2">
-            {filtered.map(order => {
-              const p = PLATFORM_STYLE[order.platform]
-              const statusColor = STATUS_COLOR[order.status] || 'text-slate-400'
-              return (
-                <div key={order.id} className="card-base p-4 flex items-center gap-4 hover:bg-white/5 transition-colors">
-                  {/* Platform badge */}
-                  <span className={`flex-shrink-0 text-xs px-2.5 py-1 rounded-full border ${p.bg} ${p.text} ${p.border} font-medium w-14 text-center`}>
-                    {p.label}
-                  </span>
-
-                  {/* Order info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-slate-200 truncate">{order.customer}</span>
-                      {order.orderNumber && (
-                        <span className="text-xs text-slate-600">#{order.orderNumber}</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-500 truncate">{order.product}</p>
-                  </div>
-
-                  {/* Amount */}
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-semibold text-slate-200">
-                      {order.amount > 0 ? fmt(order.amount, order.currency) : '—'}
-                    </p>
-                    <p className={`text-xs ${statusColor}`}>{order.status}</p>
-                  </div>
-
-                  {/* Time */}
-                  <span className="text-xs text-slate-600 flex-shrink-0 w-16 text-right">
-                    {timeAgo(order.date)}
-                  </span>
-
-                  {/* Link */}
-                  {order.link && (
-                    <a href={order.link} target="_blank" rel="noopener noreferrer"
-                      className="flex-shrink-0 text-slate-600 hover:text-slate-300 transition-colors">
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-                  )}
-                </div>
-              )
-            })}
+            {filtered.map(order => (
+              <OrderRow key={order.id} order={order} onFulfilled={handleFulfilled} />
+            ))}
           </div>
         )}
       </div>
