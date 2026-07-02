@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ArrowLeft, RefreshCw, ShoppingBag, Package, ExternalLink, Truck, Check, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, RefreshCw, ShoppingBag, Package, ExternalLink, Truck, Check } from 'lucide-react'
 import Link from 'next/link'
 
 interface Order {
@@ -51,8 +51,13 @@ function formatDate(dateStr: string) {
   })
 }
 
+function shippingDeadline(orderDate: string) {
+  const d = new Date(orderDate)
+  d.setDate(d.getDate() + 3)
+  return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
 function OrderRow({ order, onFulfilled }: { order: Order; onFulfilled: (id: string) => void }) {
-  const [expanded, setExpanded] = useState(false)
   const [tracking, setTracking] = useState('')
   const [carrier, setCarrier] = useState('DHL')
   const [sending, setSending] = useState(false)
@@ -60,7 +65,6 @@ function OrderRow({ order, onFulfilled }: { order: Order; onFulfilled: (id: stri
   const [error, setError] = useState('')
 
   const p = PLATFORM_STYLE[order.platform]
-  const statusColor = STATUS_COLOR[order.status] || 'text-slate-400'
 
   async function fulfill() {
     if (!tracking.trim() && order.platform === 'wix') {
@@ -73,146 +77,83 @@ function OrderRow({ order, onFulfilled }: { order: Order; onFulfilled: (id: stri
       const res = await fetch('/api/orders/fulfill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId: order.id,
-          platform: order.platform,
-          trackingNumber: tracking,
-          carrier,
-        }),
+        body: JSON.stringify({ orderId: order.id, platform: order.platform, trackingNumber: tracking, carrier }),
       })
       const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || 'Fehler beim Versenden')
-      } else {
-        setSent(true)
-        setExpanded(false)
-        onFulfilled(order.id)
-      }
-    } catch {
-      setError('Netzwerkfehler')
-    } finally {
-      setSending(false)
-    }
+      if (!res.ok) setError(data.error || 'Fehler')
+      else { setSent(true); onFulfilled(order.id) }
+    } catch { setError('Netzwerkfehler') }
+    finally { setSending(false) }
   }
 
   return (
-    <div className={`card-base transition-all ${sent ? 'opacity-60' : ''}`}>
-      {/* Main row */}
-      <div className="p-4 flex items-center gap-3">
-        {/* Versandt-Haken */}
-        <button
-          onClick={() => sent ? null : setExpanded(!expanded)}
-          className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-            sent
-              ? 'bg-green-500 border-green-500'
-              : 'border-slate-600 hover:border-green-500'
-          }`}
-        >
-          {sent && <Check className="w-3.5 h-3.5 text-white" />}
-        </button>
+    <div className={`card-base p-4 space-y-3 transition-all ${sent ? 'opacity-50' : ''}`}>
 
-        {/* Platform */}
+      {/* Zeile 1: Haken + Platform + Kunde + Betrag */}
+      <div className="flex items-center gap-3">
+        <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center ${sent ? 'bg-green-500 border-green-500' : 'border-slate-600'}`}>
+          {sent && <Check className="w-3.5 h-3.5 text-white" />}
+        </div>
         <span className={`flex-shrink-0 text-xs px-2.5 py-0.5 rounded-full border ${p.bg} ${p.text} ${p.border} font-medium`}>
           {p.label}
         </span>
-
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-slate-200">{order.customer}</span>
-            <span className="text-xs text-slate-600">#{order.orderNumber}</span>
-          </div>
-          <p className="text-xs text-slate-500 truncate">{order.product}</p>
-        </div>
-
-        {/* Amount + status */}
-        <div className="text-right flex-shrink-0">
-          <p className="text-sm font-semibold text-slate-200">
-            {order.amount > 0 ? fmt(order.amount, order.currency) : '—'}
-          </p>
-          <p className={`text-xs ${sent ? 'text-green-400' : statusColor}`}>
-            {sent ? 'Versandt ✓' : order.status}
-          </p>
-        </div>
-
-        {/* Date */}
-        <span className="text-xs text-slate-600 flex-shrink-0 hidden md:block">
-          {formatDate(order.date)}
+        <span className="text-sm font-semibold text-slate-100 flex-1">{order.customer}</span>
+        <span className="text-sm font-bold text-slate-200 flex-shrink-0">
+          {order.amount > 0 ? fmt(order.amount, order.currency) : '—'}
         </span>
-
-        {/* External link */}
         {order.link && (
-          <a href={order.link} target="_blank" rel="noopener noreferrer"
-            className="flex-shrink-0 text-slate-600 hover:text-slate-300 transition-colors">
+          <a href={order.link} target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:text-slate-300">
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         )}
-
-        {/* Expand */}
-        {!sent && (
-          <button onClick={() => setExpanded(!expanded)}
-            className="flex-shrink-0 text-slate-600 hover:text-slate-300 transition-colors">
-            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
-        )}
       </div>
 
-      {/* Expanded: shipping form */}
-      {expanded && !sent && (
-        <div className="border-t border-white/5 px-4 pb-4 pt-3 space-y-3">
-          <div className="grid grid-cols-2 gap-3 text-xs text-slate-500">
-            <div>
-              <span className="text-slate-600">Bestellnummer:</span>
-              <span className="ml-2 text-slate-300">#{order.orderNumber}</span>
-            </div>
-            <div>
-              <span className="text-slate-600">Artikel:</span>
-              <span className="ml-2 text-slate-300">{order.product}</span>
-            </div>
-            <div>
-              <span className="text-slate-600">Bestellt am:</span>
-              <span className="ml-2 text-slate-300">{formatDate(order.date)}</span>
-            </div>
-            <div>
-              <span className="text-slate-600">Betrag:</span>
-              <span className="ml-2 text-slate-300">{fmt(order.amount, order.currency)}</span>
-            </div>
-          </div>
+      {/* Zeile 2: Details */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 pl-9 text-xs">
+        <div>
+          <span className="text-slate-600">Bestellnr.</span>
+          <span className="ml-1.5 text-slate-300">#{order.orderNumber || '—'}</span>
+        </div>
+        <div>
+          <span className="text-slate-600">Bestellt</span>
+          <span className="ml-1.5 text-slate-300">{formatDate(order.date)}</span>
+        </div>
+        <div className="col-span-2 md:col-span-1">
+          <span className="text-slate-600">Artikel</span>
+          <span className="ml-1.5 text-slate-300 truncate">{order.product}</span>
+        </div>
+        <div>
+          <span className="text-slate-600">Versand bis</span>
+          <span className="ml-1.5 text-orange-400 font-medium">{shippingDeadline(order.date)}</span>
+        </div>
+      </div>
 
+      {/* Zeile 3: Versand-Aktion */}
+      {!sent && (
+        <div className="pl-9">
           {order.platform === 'etsy' ? (
-            <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl px-4 py-3 text-xs text-orange-300">
-              Etsy API noch nicht freigegeben — bitte manuell auf Etsy als versandt markieren.
-              <a href="https://www.etsy.com/your/orders/sold" target="_blank" rel="noopener noreferrer"
-                className="ml-2 underline">Etsy öffnen →</a>
+            <div className="flex items-center gap-2 text-xs text-orange-400">
+              <span>Etsy API ausstehend —</span>
+              <a href="https://www.etsy.com/your/orders/sold" target="_blank" rel="noopener noreferrer" className="underline">manuell versenden →</a>
             </div>
           ) : (
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <select value={carrier} onChange={e => setCarrier(e.target.value)}
-                  className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-orange-500/40 flex-shrink-0">
-                  <option value="DHL">DHL</option>
-                  <option value="Hermes">Hermes</option>
-                  <option value="DPD">DPD</option>
-                  <option value="GLS">GLS</option>
-                  <option value="UPS">UPS</option>
-                  <option value="Deutsche Post">Deutsche Post</option>
-                  <option value="Other">Sonstiger</option>
-                </select>
-                <input
-                  value={tracking}
-                  onChange={e => setTracking(e.target.value)}
-                  placeholder="Sendungsnummer eingeben..."
-                  className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-orange-500/40"
-                />
-              </div>
-              {error && <p className="text-xs text-red-400">{error}</p>}
+            <div className="flex gap-2 items-center flex-wrap">
+              <select value={carrier} onChange={e => setCarrier(e.target.value)}
+                className="bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-green-500/40">
+                <option>DHL</option><option>Hermes</option><option>DPD</option>
+                <option>GLS</option><option>UPS</option><option>Deutsche Post</option><option>Other</option>
+              </select>
+              <input value={tracking} onChange={e => setTracking(e.target.value)}
+                placeholder="Sendungsnummer..."
+                className="flex-1 min-w-[160px] bg-black/30 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-green-500/40" />
               <button onClick={fulfill} disabled={sending}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-xl text-sm font-medium transition-colors disabled:opacity-40">
-                {sending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />}
-                {sending ? 'Wird versendet...' : 'Als versandt markieren + Tracking senden'}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-lg text-xs font-medium transition-colors disabled:opacity-40 flex-shrink-0">
+                {sending ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Truck className="w-3.5 h-3.5" />}
+                {sending ? 'Sende...' : 'Versenden'}
               </button>
             </div>
           )}
+          {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
         </div>
       )}
     </div>
