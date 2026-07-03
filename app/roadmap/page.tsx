@@ -245,11 +245,11 @@ export default function RoadmapPage() {
               <div key={section.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '1rem 1.25rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
                   <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{section.emoji} {section.title}</h2>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'baseline' }}>
+                    <span style={{ fontSize: 12, color: ACCENT2 }}>{doneCount}/{total} · {pct}%</span>
                     {remainingLabel && (
                       <span style={{ fontSize: 13, color: ACCENT, fontWeight: 700 }}>⏱ {remainingLabel} offen</span>
                     )}
-                    <span style={{ fontSize: 12, color: ACCENT2 }}>{doneCount}/{total} · {pct}%</span>
                   </div>
                 </div>
                 <div style={{ height: 3, borderRadius: 999, background: BORDER, marginBottom: 12, overflow: 'hidden' }}>
