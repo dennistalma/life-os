@@ -119,7 +119,6 @@ export default function ReceiptCapture({ onDataUpdate }: Props) {
             ref={inputRef}
             type="file"
             accept="image/*"
-            capture="environment"
             onChange={handleFile}
             className="hidden"
           />
