@@ -6,7 +6,7 @@ const redis = new Redis({
   token: process.env.LAGERUNG_REST_TOKEN || process.env.KV_REST_API_TOKEN || '',
 })
 
-const KEY = 'spiritlamps-roadmap'
+const KEY = 'spiritlamps-roadmap-v2'
 
 export async function POST(req: NextRequest) {
   const { sectionId, itemId } = await req.json()

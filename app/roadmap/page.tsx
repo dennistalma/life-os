@@ -1,17 +1,18 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, X, Plus } from 'lucide-react'
 import Link from 'next/link'
 
-interface Item { id: string; text: string; done: boolean }
-interface Section { id: string; title: string; items: Item[] }
+interface Item { id: string; text: string; done: boolean; category?: string; notes?: string }
+interface Section { id: string; title: string; emoji: string; items: Item[] }
 
 const ACCENT = '#f97316'
 const ACCENT2 = '#22d3ee'
 const BG = '#0b0e14'
 const CARD = '#131722'
 const BORDER = '#232838'
+const PANEL_BG = '#0f1520'
 const TEXT = '#e6e9f0'
 const TEXT_MUTED = '#8b92a5'
 
@@ -19,12 +20,20 @@ export default function RoadmapPage() {
   const [sections, setSections] = useState<Section[]>([])
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState<{ section: Section; item: Item } | null>(null)
+  const [editingNotes, setEditingNotes] = useState('')
+  const [savingNotes, setSavingNotes] = useState(false)
 
   useEffect(() => {
     fetch('/api/roadmap')
       .then(r => r.json())
       .then(d => { setSections(d.sections || []); setLoading(false) })
   }, [])
+
+  // Sync editingNotes when selected changes
+  useEffect(() => {
+    if (selected) setEditingNotes(selected.item.notes || '')
+  }, [selected?.item.id])
 
   const overallProgress = useMemo(() => {
     const all = sections.flatMap(s => s.items)
@@ -33,17 +42,34 @@ export default function RoadmapPage() {
   }, [sections])
 
   async function toggleItem(sectionId: string, itemId: string) {
-    // Optimistic update
     setSections(prev => prev.map(s =>
       s.id !== sectionId ? s : {
         ...s, items: s.items.map(i => i.id === itemId ? { ...i, done: !i.done } : i)
       }
     ))
+    if (selected?.item.id === itemId) {
+      setSelected(prev => prev ? { ...prev, item: { ...prev.item, done: !prev.item.done } } : null)
+    }
     await fetch('/api/roadmap/toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sectionId, itemId }),
     })
+  }
+
+  async function saveNotes(sectionId: string, itemId: string, notes: string) {
+    setSavingNotes(true)
+    setSections(prev => prev.map(s =>
+      s.id !== sectionId ? s : {
+        ...s, items: s.items.map(i => i.id === itemId ? { ...i, notes } : i)
+      }
+    ))
+    await fetch('/api/roadmap/notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sectionId, itemId, notes }),
+    })
+    setSavingNotes(false)
   }
 
   async function addItem(sectionId: string) {
@@ -59,6 +85,10 @@ export default function RoadmapPage() {
     })
   }
 
+  function openItem(section: Section, item: Item) {
+    setSelected({ section, item })
+  }
+
   if (loading) return (
     <div style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', color: TEXT_MUTED }}>
       Lade Roadmap...
@@ -66,82 +96,163 @@ export default function RoadmapPage() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, color: TEXT, padding: '2rem 2rem', fontFamily: 'system-ui, sans-serif' }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+    <div style={{ minHeight: '100vh', background: BG, color: TEXT, fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
+
+      {/* Detail Panel Overlay */}
+      {selected && (
+        <>
+          <div
+            onClick={() => setSelected(null)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 40 }}
+          />
+          <div style={{
+            position: 'fixed', top: 0, right: 0, bottom: 0, width: 420,
+            background: PANEL_BG, borderLeft: `1px solid ${BORDER}`,
+            zIndex: 50, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: 16,
+            overflowY: 'auto',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1, marginRight: 12 }}>
+                {selected.item.category && (
+                  <span style={{ fontSize: 11, color: ACCENT2, background: 'rgba(34,211,238,0.1)', padding: '2px 8px', borderRadius: 99, border: `1px solid rgba(34,211,238,0.2)` }}>
+                    {selected.item.category}
+                  </span>
+                )}
+                <p style={{ fontSize: 15, fontWeight: 600, color: TEXT, marginTop: 10, lineHeight: 1.4 }}>
+                  {selected.item.text}
+                </p>
+                <p style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4 }}>{selected.section.emoji} {selected.section.title}</p>
+              </div>
+              <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: TEXT_MUTED, padding: 4 }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Status toggle */}
+            <button
+              onClick={() => toggleItem(selected.section.id, selected.item.id)}
+              style={{
+                padding: '10px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 500,
+                background: selected.item.done ? 'rgba(34,197,94,0.15)' : 'rgba(249,115,22,0.15)',
+                color: selected.item.done ? '#4ade80' : ACCENT,
+              }}
+            >
+              {selected.item.done ? '✓ Erledigt — als offen markieren' : '○ Als erledigt markieren'}
+            </button>
+
+            {/* Notes */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <label style={{ fontSize: 12, color: TEXT_MUTED }}>Notizen & Infos</label>
+              <textarea
+                value={editingNotes}
+                onChange={e => setEditingNotes(e.target.value)}
+                placeholder="Notizen, Links, nächste Schritte..."
+                rows={10}
+                style={{
+                  flex: 1, background: 'rgba(0,0,0,0.3)', border: `1px solid ${BORDER}`,
+                  borderRadius: 10, padding: '10px 12px', color: TEXT, fontSize: 13,
+                  lineHeight: 1.6, outline: 'none', resize: 'vertical',
+                }}
+              />
+              <button
+                onClick={() => saveNotes(selected.section.id, selected.item.id, editingNotes)}
+                disabled={savingNotes || editingNotes === (selected.item.notes || '')}
+                style={{
+                  padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  background: ACCENT, color: '#fff', fontSize: 13, fontWeight: 500,
+                  opacity: (savingNotes || editingNotes === (selected.item.notes || '')) ? 0.4 : 1,
+                }}
+              >
+                {savingNotes ? 'Speichere...' : 'Notiz speichern'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      <div style={{ padding: '2rem 2rem', maxWidth: 1200, margin: '0 auto', width: '100%' }}>
 
         <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
           <Link href="/" style={{ color: TEXT_MUTED, display: 'flex', alignItems: 'center' }}>
             <ArrowLeft size={18} />
           </Link>
           <div>
-            <h1 style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>SpiritLamps Launch-Roadmap</h1>
-            <p style={{ color: TEXT_MUTED, fontSize: 14, marginTop: 2 }}>Start: 3. Juli 2026 · Launch: 1. November 2026</p>
+            <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0 }}>SpiritLamps Launch-Roadmap</h1>
+            <p style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 2 }}>Start: 3. Juli 2026 · Launch: 1. November 2026 · BCB Berlin: 12.–14. Oktober</p>
           </div>
         </div>
 
-        <div style={{ marginBottom: 32 }}>
+        {/* Overall progress */}
+        <div style={{ marginBottom: 28 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: TEXT_MUTED, marginBottom: 6 }}>
             <span>Gesamtfortschritt</span>
             <span style={{ color: ACCENT2, fontWeight: 600 }}>{overallProgress}%</span>
           </div>
           <div style={{ height: 8, borderRadius: 999, background: BORDER, overflow: 'hidden' }}>
-            <div style={{
-              height: '100%', width: `${overallProgress}%`,
-              background: `linear-gradient(90deg, ${ACCENT}, ${ACCENT2})`,
-              transition: 'width 0.3s ease',
-            }} />
+            <div style={{ height: '100%', width: `${overallProgress}%`, background: `linear-gradient(90deg, ${ACCENT}, ${ACCENT2})`, transition: 'width 0.4s ease' }} />
           </div>
         </div>
 
+        {/* 2-column grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
-        {sections.map(section => {
-          const doneCount = section.items.filter(i => i.done).length
-          const total = section.items.length
-          const pct = total ? Math.round((doneCount / total) * 100) : 0
-          return (
-            <div key={section.id} style={{
-              background: CARD, border: `1px solid ${BORDER}`,
-              borderRadius: 12, padding: '1rem 1.25rem', marginBottom: 16,
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-                <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>{section.title}</h2>
-                <span style={{ fontSize: 12, color: ACCENT2 }}>{doneCount}/{total} · {pct}%</span>
-              </div>
+          {sections.map(section => {
+            const doneCount = section.items.filter(i => i.done).length
+            const total = section.items.length
+            const pct = total ? Math.round((doneCount / total) * 100) : 0
+            return (
+              <div key={section.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '1rem 1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                  <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{section.emoji} {section.title}</h2>
+                  <span style={{ fontSize: 12, color: ACCENT2 }}>{doneCount}/{total} · {pct}%</span>
+                </div>
+                <div style={{ height: 3, borderRadius: 999, background: BORDER, marginBottom: 12, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${pct}%`, background: ACCENT2, transition: 'width 0.3s' }} />
+                </div>
 
-              <div style={{ height: 3, borderRadius: 999, background: BORDER, marginBottom: 12, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${pct}%`, background: ACCENT2, transition: 'width 0.3s' }} />
-              </div>
+                {section.items.map(item => (
+                  <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '5px 0', borderBottom: `1px solid rgba(255,255,255,0.03)` }}>
+                    <input
+                      type="checkbox"
+                      checked={item.done}
+                      onChange={() => toggleItem(section.id, item.id)}
+                      style={{ marginTop: 3, accentColor: ACCENT, width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {item.category && (
+                        <span style={{ fontSize: 10, color: TEXT_MUTED, marginRight: 6 }}>{item.category} ·</span>
+                      )}
+                      <button
+                        onClick={() => openItem(section, item)}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left',
+                          fontSize: 13, color: item.done ? TEXT_MUTED : TEXT,
+                          textDecoration: item.done ? 'line-through' : 'none',
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {item.text}
+                        {item.notes && <span style={{ marginLeft: 6, fontSize: 10, color: ACCENT2 }}>●</span>}
+                      </button>
+                    </div>
+                  </div>
+                ))}
 
-              {section.items.map(item => (
-                <label key={item.id} style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 10,
-                  padding: '6px 0', cursor: 'pointer', fontSize: 14,
-                  color: item.done ? TEXT_MUTED : TEXT,
-                  textDecoration: item.done ? 'line-through' : 'none',
-                }}>
-                  <input type="checkbox" checked={item.done} onChange={() => toggleItem(section.id, item.id)}
-                    style={{ marginTop: 3, accentColor: ACCENT, width: 16, height: 16, flexShrink: 0 }} />
-                  <span>{item.text}</span>
-                </label>
-              ))}
-
-              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                <input type="text" placeholder="Neue Aufgabe hinzufügen..."
-                  value={drafts[section.id] || ''}
-                  onChange={e => setDrafts(prev => ({ ...prev, [section.id]: e.target.value }))}
-                  onKeyDown={e => e.key === 'Enter' && addItem(section.id)}
-                  style={{
-                    flex: 1, background: BG, border: `1px solid ${BORDER}`,
-                    borderRadius: 8, padding: '8px 10px', color: TEXT, fontSize: 13, outline: 'none',
-                  }} />
-                <button onClick={() => addItem(section.id)} style={{
-                  background: 'transparent', border: `1px solid ${ACCENT}`,
-                  color: ACCENT, borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer',
-                }}>+</button>
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  <input
+                    type="text"
+                    placeholder="Neue Aufgabe..."
+                    value={drafts[section.id] || ''}
+                    onChange={e => setDrafts(prev => ({ ...prev, [section.id]: e.target.value }))}
+                    onKeyDown={e => e.key === 'Enter' && addItem(section.id)}
+                    style={{ flex: 1, background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '6px 10px', color: TEXT, fontSize: 12, outline: 'none' }}
+                  />
+                  <button onClick={() => addItem(section.id)} style={{ background: 'transparent', border: `1px solid ${ACCENT}`, color: ACCENT, borderRadius: 8, padding: '6px 12px', fontSize: 13, cursor: 'pointer' }}>
+                    <Plus size={14} />
+                  </button>
+                </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
         </div>
       </div>
     </div>

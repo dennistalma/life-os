@@ -9,16 +9,15 @@ const redis = new Redis({
 const KEY = 'spiritlamps-roadmap-v2'
 
 export async function POST(req: NextRequest) {
-  const { sectionId, text } = await req.json()
-  if (!text?.trim()) return NextResponse.json({ error: 'Kein Text' }, { status: 400 })
-
-  const sections = (await redis.get(KEY)) as { id: string; title: string; items: { id: string; text: string; done: boolean }[] }[] | null
+  const { sectionId, itemId, notes } = await req.json()
+  const sections = (await redis.get(KEY)) as { id: string; title: string; emoji: string; items: { id: string; text: string; done: boolean; category?: string; notes?: string }[] }[] | null
   if (!sections) return NextResponse.json({ error: 'Nicht initialisiert' }, { status: 400 })
 
-  const newItem = { id: `${sectionId}-${Date.now()}`, text: text.trim(), done: false }
   const updated = sections.map(s =>
-    s.id !== sectionId ? s : { ...s, items: [...s.items, newItem] }
+    s.id !== sectionId ? s : {
+      ...s, items: s.items.map(i => i.id === itemId ? { ...i, notes } : i)
+    }
   )
   await redis.set(KEY, updated)
-  return NextResponse.json({ ok: true, item: newItem })
+  return NextResponse.json({ ok: true })
 }
