@@ -93,6 +93,7 @@ export default function RoadmapPage() {
           </div>
         </div>
 
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
         {sections.map(section => {
           const doneCount = section.items.filter(i => i.done).length
           const total = section.items.length
@@ -141,6 +142,7 @@ export default function RoadmapPage() {
             </div>
           )
         })}
+        </div>
       </div>
     </div>
   )
