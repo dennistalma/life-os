@@ -44,6 +44,18 @@ const TOOLS = [
       required: ['section', 'item_text'],
     },
   },
+  {
+    name: 'delete_roadmap_item',
+    description: 'Löscht eine Aufgabe aus der Roadmap.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        section: { type: 'string', enum: ['juli', 'august', 'september', 'oktober', 'launch'] },
+        item_text: { type: 'string', description: 'Text der Aufgabe (oder Teil davon)' },
+      },
+      required: ['section', 'item_text'],
+    },
+  },
 ]
 
 type Item = { id: string; text: string; done: boolean; category?: string; notes?: string }
@@ -77,6 +89,22 @@ async function handleTool(name: string, args: Record<string, string>) {
         s.items.map(i => `  ${i.done ? '✓' : '○'} ${i.text}`).join('\n')
     }).join('\n\n')
     return { content: text }
+  }
+
+  if (name === 'delete_roadmap_item') {
+    const { section, item_text } = args
+    let found = false
+    const updated = sections.map(s => {
+      if (s.id !== section) return s
+      const filtered = s.items.filter(i => {
+        if (i.text.toLowerCase().includes(item_text.toLowerCase())) { found = true; return false }
+        return true
+      })
+      return { ...s, items: filtered }
+    })
+    if (!found) return { error: `Aufgabe "${item_text}" nicht gefunden` }
+    await redis.set(KEY, updated)
+    return { content: `🗑️ Aufgabe "${item_text}" wurde gelöscht.` }
   }
 
   if (name === 'toggle_roadmap_item') {

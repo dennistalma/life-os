@@ -25,9 +25,12 @@ export default function RoadmapPage() {
   const [savingNotes, setSavingNotes] = useState(false)
 
   useEffect(() => {
-    fetch('/api/roadmap')
+    const load = () => fetch('/api/roadmap')
       .then(r => r.json())
       .then(d => { setSections(d.sections || []); setLoading(false) })
+    load()
+    const interval = setInterval(load, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   // Sync editingNotes when selected changes
