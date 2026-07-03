@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Camera, Loader2, CheckCircle, AlertCircle, Receipt as ReceiptIcon } from 'lucide-react'
 import { AppData } from '@/lib/types'
 import { ReceiptExtraction } from '@/lib/receiptExtractor'
@@ -29,12 +29,12 @@ export default function ReceiptCapture({ onDataUpdate }: Props) {
   const [errorMsg, setErrorMsg] = useState('')
   const [image, setImage] = useState<{ base64: string; mediaType: string; previewUrl: string } | null>(null)
   const [extraction, setExtraction] = useState<ReceiptExtraction | null>(null)
+  const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const statusRef = useRef<Status>('idle')
+  statusRef.current = status
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-
+  async function processFile(file: File) {
     setStatus('reading')
     setErrorMsg('')
     try {
@@ -57,6 +57,37 @@ export default function ReceiptCapture({ onDataUpdate }: Props) {
       setStatus('error')
     }
   }
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) processFile(file)
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLLabelElement>) {
+    e.preventDefault()
+    setDragActive(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file && file.type.startsWith('image/')) processFile(file)
+  }
+
+  useEffect(() => {
+    function handlePaste(e: ClipboardEvent) {
+      if (statusRef.current !== 'idle') return
+      const items = e.clipboardData?.items
+      if (!items) return
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile()
+          if (file) {
+            processFile(file)
+            break
+          }
+        }
+      }
+    }
+    document.addEventListener('paste', handlePaste)
+    return () => document.removeEventListener('paste', handlePaste)
+  }, [])
 
   async function handleConfirm() {
     if (!extraction || !image) return
@@ -112,9 +143,21 @@ export default function ReceiptCapture({ onDataUpdate }: Props) {
       </h2>
 
       {status === 'idle' && (
-        <label className="flex flex-col items-center justify-center gap-2 py-6 border border-dashed border-[#2a2a3d] rounded-xl hover:border-cyan-500/40 cursor-pointer transition-colors">
+        <label
+          onDragOver={(e) => {
+            e.preventDefault()
+            setDragActive(true)
+          }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={handleDrop}
+          className={`flex flex-col items-center justify-center gap-2 py-6 border border-dashed rounded-xl cursor-pointer transition-colors ${
+            dragActive ? 'border-cyan-500/70 bg-cyan-500/5' : 'border-[#2a2a3d] hover:border-cyan-500/40'
+          }`}
+        >
           <Camera className="w-6 h-6 text-slate-500" />
-          <span className="text-xs text-slate-500">Foto/Screenshot einer Rechnung hochladen</span>
+          <span className="text-xs text-slate-500 text-center px-4">
+            Bild hierher ziehen, mit Strg+V einfügen oder klicken zum Hochladen
+          </span>
           <input
             ref={inputRef}
             type="file"
