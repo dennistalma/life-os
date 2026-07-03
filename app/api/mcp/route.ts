@@ -67,7 +67,19 @@ async function handleTool(name: string, args: Record<string, string>) {
   if (!sections) return { error: 'Roadmap nicht initialisiert' }
 
   if (name === 'add_roadmap_item') {
-    const { section, text, category, notes, duration } = args
+    const { section, category, notes } = args
+    let { text, duration } = args
+
+    // Auto-extract duration from text if not provided explicitly
+    // Matches: (Aufwand: 30 Min), (2–3 Std), (ca. 1 Tag), etc.
+    if (!duration) {
+      const match = text.match(/\((?:Aufwand[:\s]*)?(\d+[\d\s–\-]*(?:Min(?:uten?)?|Std(?:unden?)?|Tage?n?|h)(?:[^)]*)?)\)/i)
+      if (match) {
+        duration = match[1].trim()
+        text = text.replace(match[0], '').trim()
+      }
+    }
+
     const newItem: Item = {
       id: `${section}-${Date.now()}`,
       text: text.trim(),
