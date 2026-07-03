@@ -193,7 +193,6 @@ export default function RoadmapPage() {
           </div>
         </div>
 
-        {/* 2-column grid */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {sections.map(section => {
             const doneCount = section.items.filter(i => i.done).length
