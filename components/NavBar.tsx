@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ExternalLink, Package } from 'lucide-react'
+import { LayoutDashboard, ExternalLink, Package, Map } from 'lucide-react'
 
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard, external: false },
   { href: '/orders', label: 'Bestellungen', icon: Package, external: false },
+  { href: '/roadmap', label: 'Roadmap', icon: Map, external: false },
   { href: 'https://euer-app.vercel.app', label: 'EÜR-App', icon: ExternalLink, external: true },
 ]
 
