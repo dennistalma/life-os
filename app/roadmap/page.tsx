@@ -215,7 +215,7 @@ export default function RoadmapPage() {
                         display: 'flex', alignItems: 'flex-start', gap: 7,
                         background: item.done ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
                         border: `1px solid ${item.done ? 'rgba(255,255,255,0.05)' : BORDER}`,
-                        borderRadius: 8, padding: '7px 10px',
+                        borderRadius: 8, padding: '10px 14px',
                         width: '100%',
                       }}
                     >
@@ -229,7 +229,7 @@ export default function RoadmapPage() {
                         onClick={() => openItem(section, item)}
                         style={{
                           background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left',
-                          fontSize: 12, color: item.done ? TEXT_MUTED : TEXT,
+                          fontSize: 18, color: item.done ? TEXT_MUTED : TEXT,
                           textDecoration: item.done ? 'line-through' : 'none',
                           lineHeight: 1.4, flex: 1,
                         }}
