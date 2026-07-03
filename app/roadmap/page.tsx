@@ -232,10 +232,10 @@ export default function RoadmapPage() {
                               value={noteVal}
                               onChange={e => setEditingNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
                               placeholder="Notizen, Links, nächste Schritte..."
-                              rows={4}
+                              rows={6}
                               style={{
                                 background: 'rgba(0,0,0,0.3)', border: `1px solid ${BORDER}`, borderRadius: 8,
-                                padding: '8px 12px', color: TEXT, fontSize: 14, lineHeight: 1.6, outline: 'none', resize: 'vertical',
+                                padding: '12px 16px', color: TEXT, fontSize: 28, lineHeight: 1.6, outline: 'none', resize: 'vertical',
                               }}
                             />
                             <div style={{ display: 'flex', gap: 8 }}>
