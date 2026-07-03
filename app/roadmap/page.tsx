@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { ArrowLeft, X, Plus } from 'lucide-react'
+import { ArrowLeft, Plus } from 'lucide-react'
 import Link from 'next/link'
 
 interface Item { id: string; text: string; done: boolean; category?: string; notes?: string; duration?: string }
@@ -20,8 +20,8 @@ export default function RoadmapPage() {
   const [sections, setSections] = useState<Section[]>([])
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState<{ section: Section; item: Item } | null>(null)
-  const [editingNotes, setEditingNotes] = useState('')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [editingNotes, setEditingNotes] = useState<Record<string, string>>({})
   const [savingNotes, setSavingNotes] = useState(false)
 
   useEffect(() => {
@@ -33,10 +33,6 @@ export default function RoadmapPage() {
     return () => clearInterval(interval)
   }, [])
 
-  // Sync editingNotes when selected changes
-  useEffect(() => {
-    if (selected) setEditingNotes(selected.item.notes || '')
-  }, [selected?.item.id])
 
   function parseDuration(d?: string): number {
     if (!d) return 0
@@ -108,6 +104,15 @@ export default function RoadmapPage() {
     setSavingNotes(false)
   }
 
+  function toggleExpand(itemId: string, currentNotes: string) {
+    if (expandedId === itemId) {
+      setExpandedId(null)
+    } else {
+      setExpandedId(itemId)
+      setEditingNotes(prev => ({ ...prev, [itemId]: currentNotes || '' }))
+    }
+  }
+
   async function addItem(sectionId: string) {
     const text = (drafts[sectionId] || '').trim()
     if (!text) return
@@ -121,10 +126,6 @@ export default function RoadmapPage() {
     })
   }
 
-  function openItem(section: Section, item: Item) {
-    setSelected({ section, item })
-  }
-
   if (loading) return (
     <div style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', color: TEXT_MUTED }}>
       Lade Roadmap...
@@ -134,80 +135,6 @@ export default function RoadmapPage() {
   return (
     <div style={{ minHeight: '100vh', background: BG, color: TEXT, fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Detail Panel Overlay */}
-      {selected && (
-        <>
-          <div
-            onClick={() => setSelected(null)}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 40 }}
-          />
-          <div style={{
-            position: 'fixed', top: 0, right: 0, bottom: 0, width: 420,
-            background: PANEL_BG, borderLeft: `1px solid ${BORDER}`,
-            zIndex: 50, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: 16,
-            overflowY: 'auto',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ flex: 1, marginRight: 12 }}>
-                {selected.item.category && (
-                  <span style={{ fontSize: 11, color: ACCENT2, background: 'rgba(34,211,238,0.1)', padding: '2px 8px', borderRadius: 99, border: `1px solid rgba(34,211,238,0.2)` }}>
-                    {selected.item.category}
-                  </span>
-                )}
-                <p style={{ fontSize: 15, fontWeight: 600, color: TEXT, marginTop: 10, lineHeight: 1.4 }}>
-                  {selected.item.text}
-                </p>
-                <p style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4 }}>{selected.section.emoji} {selected.section.title}</p>
-                {selected.item.duration && (
-                  <p style={{ fontSize: 12, color: ACCENT, marginTop: 4 }}>⏱ {selected.item.duration}</p>
-                )}
-              </div>
-              <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: TEXT_MUTED, padding: 4 }}>
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Status toggle */}
-            <button
-              onClick={() => toggleItem(selected.section.id, selected.item.id)}
-              style={{
-                padding: '10px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 500,
-                background: selected.item.done ? 'rgba(34,197,94,0.15)' : 'rgba(249,115,22,0.15)',
-                color: selected.item.done ? '#4ade80' : ACCENT,
-              }}
-            >
-              {selected.item.done ? '✓ Erledigt — als offen markieren' : '○ Als erledigt markieren'}
-            </button>
-
-            {/* Notes */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <label style={{ fontSize: 12, color: TEXT_MUTED }}>Notizen & Infos</label>
-              <textarea
-                value={editingNotes}
-                onChange={e => setEditingNotes(e.target.value)}
-                placeholder="Notizen, Links, nächste Schritte..."
-                rows={10}
-                style={{
-                  flex: 1, background: 'rgba(0,0,0,0.3)', border: `1px solid ${BORDER}`,
-                  borderRadius: 10, padding: '10px 12px', color: TEXT, fontSize: 13,
-                  lineHeight: 1.6, outline: 'none', resize: 'vertical',
-                }}
-              />
-              <button
-                onClick={() => saveNotes(selected.section.id, selected.item.id, editingNotes)}
-                disabled={savingNotes || editingNotes === (selected.item.notes || '')}
-                style={{
-                  padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                  background: ACCENT, color: '#fff', fontSize: 13, fontWeight: 500,
-                  opacity: (savingNotes || editingNotes === (selected.item.notes || '')) ? 0.4 : 1,
-                }}
-              >
-                {savingNotes ? 'Speichere...' : 'Notiz speichern'}
-              </button>
-            </div>
-          </div>
-        </>
-      )}
 
       <div style={{ padding: '2rem 2rem', maxWidth: 1200, margin: '0 auto', width: '100%' }}>
 
@@ -257,45 +184,91 @@ export default function RoadmapPage() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-                  {section.items.map(item => (
-                    <div key={item.id}
-                      style={{
-                        display: 'flex', alignItems: 'flex-start', gap: 7,
-                        background: item.done ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${item.done ? 'rgba(255,255,255,0.05)' : BORDER}`,
-                        borderRadius: 8, padding: '10px 14px',
-                        width: '100%',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={item.done}
-                        onChange={() => toggleItem(section.id, item.id)}
-                        style={{ marginTop: 2, accentColor: ACCENT, width: 14, height: 14, flexShrink: 0, cursor: 'pointer' }}
-                      />
-                      <button
-                        onClick={() => openItem(section, item)}
-                        style={{
-                          background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left',
-                          fontSize: 18, color: item.done ? TEXT_MUTED : TEXT,
-                          textDecoration: item.done ? 'line-through' : 'none',
-                          lineHeight: 1.4, flex: 1,
-                        }}
-                      >
-                        <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                          <span>
-                            {item.text}
-                            {item.notes && <span style={{ marginLeft: 5, fontSize: 10, color: ACCENT2 }}>●</span>}
-                          </span>
-                          {item.duration && (
-                            <span style={{ fontSize: 13, color: ACCENT, fontWeight: 600, marginLeft: 12, whiteSpace: 'nowrap' }}>
-                              ⏱ {item.duration}
+                  {section.items.map(item => {
+                    const isOpen = expandedId === item.id
+                    const noteVal = editingNotes[item.id] ?? (item.notes || '')
+                    return (
+                      <div key={item.id} style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${isOpen ? ACCENT : item.done ? 'rgba(255,255,255,0.05)' : BORDER}` }}>
+                        {/* Row */}
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          background: item.done ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
+                          padding: '10px 14px',
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={item.done}
+                            onChange={() => toggleItem(section.id, item.id)}
+                            style={{ accentColor: ACCENT, width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }}
+                          />
+                          <button
+                            onClick={() => toggleExpand(item.id, item.notes || '')}
+                            style={{
+                              background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left',
+                              fontSize: 18, color: item.done ? TEXT_MUTED : TEXT,
+                              textDecoration: item.done ? 'line-through' : 'none',
+                              lineHeight: 1.4, flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            }}
+                          >
+                            <span>
+                              {item.text}
+                              {item.notes && <span style={{ marginLeft: 6, fontSize: 10, color: ACCENT2 }}>●</span>}
                             </span>
-                          )}
-                        </span>
-                      </button>
-                    </div>
-                  ))}
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                              {item.duration && (
+                                <span style={{ fontSize: 13, color: ACCENT, fontWeight: 600 }}>⏱ {item.duration}</span>
+                              )}
+                              <span style={{ fontSize: 12, color: TEXT_MUTED }}>{isOpen ? '▲' : '▼'}</span>
+                            </span>
+                          </button>
+                        </div>
+
+                        {/* Accordion body */}
+                        {isOpen && (
+                          <div style={{ background: 'rgba(0,0,0,0.25)', borderTop: `1px solid ${BORDER}`, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {item.category && (
+                              <span style={{ fontSize: 11, color: ACCENT2, background: 'rgba(34,211,238,0.1)', padding: '2px 8px', borderRadius: 99, border: `1px solid rgba(34,211,238,0.2)`, alignSelf: 'flex-start' }}>
+                                {item.category}
+                              </span>
+                            )}
+                            <textarea
+                              value={noteVal}
+                              onChange={e => setEditingNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
+                              placeholder="Notizen, Links, nächste Schritte..."
+                              rows={4}
+                              style={{
+                                background: 'rgba(0,0,0,0.3)', border: `1px solid ${BORDER}`, borderRadius: 8,
+                                padding: '8px 12px', color: TEXT, fontSize: 14, lineHeight: 1.6, outline: 'none', resize: 'vertical',
+                              }}
+                            />
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button
+                                onClick={() => saveNotes(section.id, item.id, noteVal)}
+                                disabled={savingNotes || noteVal === (item.notes || '')}
+                                style={{
+                                  padding: '7px 16px', borderRadius: 7, border: 'none', cursor: 'pointer',
+                                  background: ACCENT, color: '#fff', fontSize: 13, fontWeight: 500,
+                                  opacity: (savingNotes || noteVal === (item.notes || '')) ? 0.4 : 1,
+                                }}
+                              >
+                                {savingNotes ? 'Speichere...' : 'Notiz speichern'}
+                              </button>
+                              <button
+                                onClick={() => toggleItem(section.id, item.id)}
+                                style={{
+                                  padding: '7px 16px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                                  background: item.done ? 'rgba(34,197,94,0.15)' : 'rgba(249,115,22,0.12)',
+                                  color: item.done ? '#4ade80' : ACCENT,
+                                }}
+                              >
+                                {item.done ? '✓ Als offen markieren' : '○ Als erledigt markieren'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Redis } from '@upstash/redis'
+import Anthropic from '@anthropic-ai/sdk'
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const redis = new Redis({
   url: process.env.LAGERUNG_URL || process.env.KV_REST_API_URL || '',
@@ -71,13 +74,25 @@ async function handleTool(name: string, args: Record<string, string>) {
     let { text, duration } = args
 
     // Auto-extract duration from text if not provided explicitly
-    // Matches: (Aufwand: 30 Min), (2–3 Std), (ca. 1 Tag), etc.
     if (!duration) {
       const match = text.match(/\((?:Aufwand[:\s]*)?(?:ca\.?\s*)?(\d+[\d\s–\-]*(?:Min(?:uten?)?|Std(?:unden?)?|Tage?n?|h)(?:[^)]*)?)\)/i)
       if (match) {
         duration = match[1].trim()
         text = text.replace(match[0], '').trim()
       }
+    }
+
+    // If still no duration, ask Claude to estimate
+    if (!duration) {
+      try {
+        const msg = await anthropic.messages.create({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 20,
+          messages: [{ role: 'user', content: `Schätze realistisch den Zeitaufwand für diese Aufgabe. Antworte NUR mit der Zeitangabe, z.B. "2–3 Std", "30 Min", "1–2 Tage". Aufgabe: "${text}"` }],
+        })
+        const raw = (msg.content[0] as { text: string }).text.trim()
+        if (raw.match(/\d/)) duration = raw
+      } catch { /* ignore */ }
     }
 
     const newItem: Item = {
