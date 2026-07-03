@@ -79,9 +79,6 @@ export default function RoadmapPage() {
         ...s, items: s.items.map(i => i.id === itemId ? { ...i, done: !i.done } : i)
       }
     ))
-    if (selected?.item.id === itemId) {
-      setSelected(prev => prev ? { ...prev, item: { ...prev.item, done: !prev.item.done } } : null)
-    }
     await fetch('/api/roadmap/toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
