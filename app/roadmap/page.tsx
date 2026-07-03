@@ -240,13 +240,17 @@ export default function RoadmapPage() {
                           lineHeight: 1.4, flex: 1,
                         }}
                       >
-                        {item.text}
-                        {item.notes && <span style={{ marginLeft: 5, fontSize: 10, color: ACCENT2 }}>●</span>}
-                        {item.duration && (
-                          <span style={{ display: 'block', fontSize: 11, color: TEXT_MUTED, marginTop: 3 }}>
-                            ⏱ {item.duration}
+                        <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                          <span>
+                            {item.text}
+                            {item.notes && <span style={{ marginLeft: 5, fontSize: 10, color: ACCENT2 }}>●</span>}
                           </span>
-                        )}
+                          {item.duration && (
+                            <span style={{ fontSize: 13, color: ACCENT, fontWeight: 600, marginLeft: 12, whiteSpace: 'nowrap' }}>
+                              ⏱ {item.duration}
+                            </span>
+                          )}
+                        </span>
                       </button>
                     </div>
                   ))}
