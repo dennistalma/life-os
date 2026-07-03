@@ -208,7 +208,7 @@ export default function RoadmapPage() {
                   <div style={{ height: '100%', width: `${pct}%`, background: ACCENT2, transition: 'width 0.3s' }} />
                 </div>
 
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
                   {section.items.map(item => (
                     <div key={item.id}
                       style={{
@@ -216,7 +216,7 @@ export default function RoadmapPage() {
                         background: item.done ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
                         border: `1px solid ${item.done ? 'rgba(255,255,255,0.05)' : BORDER}`,
                         borderRadius: 8, padding: '7px 10px',
-                        minWidth: 200, maxWidth: 340, flex: '1 1 220px',
+                        width: '100%',
                       }}
                     >
                       <input
