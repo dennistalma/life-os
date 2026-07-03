@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { ArrowLeft, X, Plus } from 'lucide-react'
 import Link from 'next/link'
 
-interface Item { id: string; text: string; done: boolean; category?: string; notes?: string }
+interface Item { id: string; text: string; done: boolean; category?: string; notes?: string; duration?: string }
 interface Section { id: string; title: string; emoji: string; items: Item[] }
 
 const ACCENT = '#f97316'
@@ -125,6 +125,9 @@ export default function RoadmapPage() {
                   {selected.item.text}
                 </p>
                 <p style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4 }}>{selected.section.emoji} {selected.section.title}</p>
+                {selected.item.duration && (
+                  <p style={{ fontSize: 12, color: ACCENT, marginTop: 4 }}>⏱ {selected.item.duration}</p>
+                )}
               </div>
               <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: TEXT_MUTED, padding: 4 }}>
                 <X size={18} />
@@ -239,6 +242,11 @@ export default function RoadmapPage() {
                       >
                         {item.text}
                         {item.notes && <span style={{ marginLeft: 5, fontSize: 10, color: ACCENT2 }}>●</span>}
+                        {item.duration && (
+                          <span style={{ display: 'block', fontSize: 11, color: TEXT_MUTED, marginTop: 3 }}>
+                            ⏱ {item.duration}
+                          </span>
+                        )}
                       </button>
                     </div>
                   ))}
