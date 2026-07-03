@@ -38,6 +38,39 @@ export default function RoadmapPage() {
     if (selected) setEditingNotes(selected.item.notes || '')
   }, [selected?.item.id])
 
+  function parseDuration(d?: string): number {
+    if (!d) return 0
+    const s = d.toLowerCase()
+    // Minutes
+    if (s.includes('min')) {
+      const m = s.match(/(\d+)/)
+      return m ? parseInt(m[1]) / 60 : 0
+    }
+    // Days (1 Tag = 8h)
+    if (s.includes('tag')) {
+      const m = s.match(/(\d+)[–\-](\d+)/)
+      if (m) return ((parseInt(m[1]) + parseInt(m[2])) / 2) * 8
+      const m2 = s.match(/(\d+)/)
+      return m2 ? parseInt(m2[1]) * 8 : 0
+    }
+    // Hours range e.g. "1–2 Std" or "mehrere Std/Woche"
+    if (s.includes('std') || s.includes('h')) {
+      if (s.includes('mehrere')) return 4
+      const m = s.match(/(\d+)[–\-](\d+)/)
+      if (m) return (parseInt(m[1]) + parseInt(m[2])) / 2
+      const m2 = s.match(/(\d+)/)
+      return m2 ? parseInt(m2[1]) : 0
+    }
+    return 0
+  }
+
+  function formatHours(h: number): string {
+    if (h === 0) return ''
+    if (h < 1) return `${Math.round(h * 60)} Min`
+    const rounded = Math.round(h * 10) / 10
+    return `${rounded} Std`
+  }
+
   const overallProgress = useMemo(() => {
     const all = sections.flatMap(s => s.items)
     const done = all.filter(i => i.done).length
@@ -204,11 +237,20 @@ export default function RoadmapPage() {
             const doneCount = section.items.filter(i => i.done).length
             const total = section.items.length
             const pct = total ? Math.round((doneCount / total) * 100) : 0
+            const remainingHours = section.items
+              .filter(i => !i.done)
+              .reduce((sum, i) => sum + parseDuration(i.duration), 0)
+            const remainingLabel = formatHours(remainingHours)
             return (
               <div key={section.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '1rem 1.25rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
                   <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{section.emoji} {section.title}</h2>
-                  <span style={{ fontSize: 12, color: ACCENT2 }}>{doneCount}/{total} · {pct}%</span>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
+                    {remainingLabel && (
+                      <span style={{ fontSize: 13, color: ACCENT, fontWeight: 700 }}>⏱ {remainingLabel} offen</span>
+                    )}
+                    <span style={{ fontSize: 12, color: ACCENT2 }}>{doneCount}/{total} · {pct}%</span>
+                  </div>
                 </div>
                 <div style={{ height: 3, borderRadius: 999, background: BORDER, marginBottom: 12, overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${pct}%`, background: ACCENT2, transition: 'width 0.3s' }} />

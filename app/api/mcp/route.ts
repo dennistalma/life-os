@@ -23,6 +23,7 @@ const TOOLS = [
         text: { type: 'string', description: 'Text der Aufgabe' },
         category: { type: 'string', description: 'Kategorie (optional)' },
         notes: { type: 'string', description: 'Notizen (optional)' },
+        duration: { type: 'string', description: 'Zeitschätzung z.B. "1–2 Std", "3 Tage", "30 Min" (optional)' },
       },
       required: ['section', 'text'],
     },
@@ -66,13 +67,14 @@ async function handleTool(name: string, args: Record<string, string>) {
   if (!sections) return { error: 'Roadmap nicht initialisiert' }
 
   if (name === 'add_roadmap_item') {
-    const { section, text, category, notes } = args
+    const { section, text, category, notes, duration } = args
     const newItem: Item = {
       id: `${section}-${Date.now()}`,
       text: text.trim(),
       done: false,
       ...(category ? { category } : {}),
       ...(notes ? { notes } : {}),
+      ...(duration ? { duration } : {}),
     }
     const updated = sections.map(s =>
       s.id !== section ? s : { ...s, items: [...s.items, newItem] }
