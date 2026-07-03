@@ -194,7 +194,7 @@ export default function RoadmapPage() {
         </div>
 
         {/* 2-column grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {sections.map(section => {
             const doneCount = section.items.filter(i => i.done).length
             const total = section.items.length
@@ -209,33 +209,38 @@ export default function RoadmapPage() {
                   <div style={{ height: '100%', width: `${pct}%`, background: ACCENT2, transition: 'width 0.3s' }} />
                 </div>
 
-                {section.items.map(item => (
-                  <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '5px 0', borderBottom: `1px solid rgba(255,255,255,0.03)` }}>
-                    <input
-                      type="checkbox"
-                      checked={item.done}
-                      onChange={() => toggleItem(section.id, item.id)}
-                      style={{ marginTop: 3, accentColor: ACCENT, width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      {item.category && (
-                        <span style={{ fontSize: 10, color: TEXT_MUTED, marginRight: 6 }}>{item.category} ·</span>
-                      )}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                  {section.items.map(item => (
+                    <div key={item.id}
+                      style={{
+                        display: 'flex', alignItems: 'flex-start', gap: 7,
+                        background: item.done ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${item.done ? 'rgba(255,255,255,0.05)' : BORDER}`,
+                        borderRadius: 8, padding: '7px 10px',
+                        minWidth: 200, maxWidth: 340, flex: '1 1 220px',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={item.done}
+                        onChange={() => toggleItem(section.id, item.id)}
+                        style={{ marginTop: 2, accentColor: ACCENT, width: 14, height: 14, flexShrink: 0, cursor: 'pointer' }}
+                      />
                       <button
                         onClick={() => openItem(section, item)}
                         style={{
                           background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left',
-                          fontSize: 13, color: item.done ? TEXT_MUTED : TEXT,
+                          fontSize: 12, color: item.done ? TEXT_MUTED : TEXT,
                           textDecoration: item.done ? 'line-through' : 'none',
-                          lineHeight: 1.4,
+                          lineHeight: 1.4, flex: 1,
                         }}
                       >
                         {item.text}
-                        {item.notes && <span style={{ marginLeft: 6, fontSize: 10, color: ACCENT2 }}>●</span>}
+                        {item.notes && <span style={{ marginLeft: 5, fontSize: 10, color: ACCENT2 }}>●</span>}
                       </button>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <input
