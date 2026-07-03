@@ -66,8 +66,8 @@ export default function RoadmapPage() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, color: TEXT, padding: '2rem 1.5rem', fontFamily: 'system-ui, sans-serif' }}>
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
+    <div style={{ minHeight: '100vh', background: BG, color: TEXT, padding: '2rem 2rem', fontFamily: 'system-ui, sans-serif' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
 
         <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
           <Link href="/" style={{ color: TEXT_MUTED, display: 'flex', alignItems: 'center' }}>
