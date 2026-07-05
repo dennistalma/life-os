@@ -157,36 +157,28 @@ export default function PrivatPage() {
     if (file && file.type.startsWith('image/')) processScan(file)
   }
 
-  function handleCsvFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleCsvFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
     setImporting(true)
     setImportError('')
     setImportCandidates(null)
-    const reader = new FileReader()
-    reader.onload = async () => {
-      try {
-        const csv = reader.result as string
-        const res = await fetch('/api/privat/import', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ csv }),
-        })
-        const json = await res.json()
-        if (!res.ok) throw new Error(json.error || 'Fehler beim Import')
-        setImportCandidates(json.candidates)
-      } catch (err) {
-        setImportError(err instanceof Error ? err.message : 'Unbekannter Fehler')
-      } finally {
-        setImporting(false)
-      }
-    }
-    reader.onerror = () => {
-      setImportError('Datei konnte nicht gelesen werden')
+    try {
+      const { base64 } = await fileToBase64(file)
+      const res = await fetch('/api/privat/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileBase64: base64, filename: file.name }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Fehler beim Import')
+      setImportCandidates(json.candidates)
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Unbekannter Fehler')
+    } finally {
       setImporting(false)
     }
-    reader.readAsText(file)
   }
 
   function updateCandidate(index: number, patch: Partial<ImportCandidate>) {
@@ -305,15 +297,15 @@ export default function PrivatPage() {
         {/* CSV-Import (Revolut) */}
         <div className="card-base p-4 space-y-3">
           <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
-            <FileUp className="w-4 h-4 text-cyan-400" /> Revolut CSV importieren
+            <FileUp className="w-4 h-4 text-cyan-400" /> Revolut-Auszug importieren
           </h2>
           <p className="text-xs text-slate-500">
-            Export in der Revolut-App unter Konto → Auszug exportieren (CSV), dann hier hochladen.
+            Export in der Revolut-App unter Kontoauszug → Excel (oder CSV), dann hier hochladen.
           </p>
           <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-sm font-medium hover:bg-cyan-500/20 cursor-pointer transition-all w-fit">
             {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileUp className="w-4 h-4" />}
-            {importing ? 'Wird analysiert...' : 'CSV auswählen'}
-            <input type="file" accept=".csv" onChange={handleCsvFile} className="hidden" disabled={importing} />
+            {importing ? 'Wird analysiert...' : 'Datei auswählen'}
+            <input type="file" accept=".csv,.xlsx,.xls" onChange={handleCsvFile} className="hidden" disabled={importing} />
           </label>
 
           {importError && (
