@@ -71,3 +71,34 @@ export async function extractPrivateExpense(
     confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.6,
   }
 }
+
+const BATCH_SYSTEM_PROMPT = `Du ordnest Kontoauszug-Buchungstexte (private Ausgaben) einer Kategorie zu.
+Kategorien: ${PRIVATE_EXPENSE_CATEGORIES.join(', ')}
+Du bekommst eine JSON-Liste von Buchungsbeschreibungen. Antworte NUR mit einem validen JSON-Array gleicher Länge und Reihenfolge, ein Kategorie-String pro Eintrag, z.B.:
+["Benzin", "Essen", "Sonstiges"]
+Ordne nach Handelsname/Kontext zu (z.B. "Shell", "Aral", "Esso" -> Benzin; Supermärkte/Restaurants/Lieferdienste -> Essen; Kiosk/Tabak -> Zigaretten; Kino/Streaming/Sport -> Freizeit; Kleidungsläden -> Kleidung). Wenn unklar: Sonstiges.`
+
+export async function classifyExpenseBatch(descriptions: string[]): Promise<string[]> {
+  if (descriptions.length === 0) return []
+
+  const message = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 2048,
+    system: BATCH_SYSTEM_PROMPT,
+    messages: [
+      {
+        role: 'user',
+        content: JSON.stringify(descriptions),
+      },
+    ],
+  })
+
+  const text = message.content[0].type === 'text' ? message.content[0].text : ''
+  const jsonMatch = text.match(/\[[\s\S]*\]/)
+  if (!jsonMatch) throw new Error('Konnte Kategorien nicht zuordnen')
+
+  const parsed = JSON.parse(jsonMatch[0])
+  return descriptions.map((_, i) =>
+    PRIVATE_EXPENSE_CATEGORIES.includes(parsed[i]) ? parsed[i] : 'Sonstiges'
+  )
+}

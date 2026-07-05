@@ -1,8 +1,18 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Trash2, Plus, ImagePlus, Loader2, AlertCircle } from 'lucide-react'
+import { Trash2, Plus, ImagePlus, Loader2, AlertCircle, FileUp, Check } from 'lucide-react'
 import { PrivateExpense, AppData } from '@/lib/types'
+
+interface ImportCandidate {
+  date: string
+  description: string
+  amount: number
+  currency: string
+  type: string
+  category: string
+  include: boolean
+}
 
 const fmt = (n: number) => n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 
@@ -57,6 +67,10 @@ export default function PrivatPage() {
   const [categoryPending, setCategoryPending] = useState(false)
   const [dragActive, setDragActive] = useState(false)
   const scanningRef = useRef(false)
+
+  const [importCandidates, setImportCandidates] = useState<ImportCandidate[] | null>(null)
+  const [importing, setImporting] = useState(false)
+  const [importError, setImportError] = useState('')
 
   useEffect(() => {
     fetch('/api/data')
@@ -143,6 +157,66 @@ export default function PrivatPage() {
     if (file && file.type.startsWith('image/')) processScan(file)
   }
 
+  function handleCsvFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setImporting(true)
+    setImportError('')
+    setImportCandidates(null)
+    const reader = new FileReader()
+    reader.onload = async () => {
+      try {
+        const csv = reader.result as string
+        const res = await fetch('/api/privat/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ csv }),
+        })
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || 'Fehler beim Import')
+        setImportCandidates(json.candidates)
+      } catch (err) {
+        setImportError(err instanceof Error ? err.message : 'Unbekannter Fehler')
+      } finally {
+        setImporting(false)
+      }
+    }
+    reader.onerror = () => {
+      setImportError('Datei konnte nicht gelesen werden')
+      setImporting(false)
+    }
+    reader.readAsText(file)
+  }
+
+  function updateCandidate(index: number, patch: Partial<ImportCandidate>) {
+    setImportCandidates((prev) =>
+      prev ? prev.map((c, i) => (i === index ? { ...c, ...patch } : c)) : prev
+    )
+  }
+
+  async function handleImportConfirm() {
+    if (!importCandidates) return
+    const toAdd = importCandidates.filter((c) => c.include)
+    if (toAdd.length === 0) {
+      setImportCandidates(null)
+      return
+    }
+    setSaving(true)
+    const now = new Date().toISOString()
+    const newEntries: PrivateExpense[] = toAdd.map((c) => ({
+      id: crypto.randomUUID(),
+      date: c.date,
+      category: c.category,
+      amount: c.amount,
+      note: c.description || undefined,
+      createdAt: now,
+    }))
+    await persist([...newEntries, ...expenses])
+    setImportCandidates(null)
+    setSaving(false)
+  }
+
   useEffect(() => {
     function handlePaste(e: ClipboardEvent) {
       if (scanningRef.current) return
@@ -227,6 +301,76 @@ export default function PrivatPage() {
             <AlertCircle className="w-4 h-4" /> {scanError}
           </div>
         )}
+
+        {/* CSV-Import (Revolut) */}
+        <div className="card-base p-4 space-y-3">
+          <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+            <FileUp className="w-4 h-4 text-cyan-400" /> Revolut CSV importieren
+          </h2>
+          <p className="text-xs text-slate-500">
+            Export in der Revolut-App unter Konto → Auszug exportieren (CSV), dann hier hochladen.
+          </p>
+          <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-sm font-medium hover:bg-cyan-500/20 cursor-pointer transition-all w-fit">
+            {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileUp className="w-4 h-4" />}
+            {importing ? 'Wird analysiert...' : 'CSV auswählen'}
+            <input type="file" accept=".csv" onChange={handleCsvFile} className="hidden" disabled={importing} />
+          </label>
+
+          {importError && (
+            <div className="flex items-center gap-2 text-sm text-red-400">
+              <AlertCircle className="w-4 h-4" /> {importError}
+            </div>
+          )}
+
+          {importCandidates && (
+            <div className="space-y-2 pt-1">
+              <p className="text-xs text-amber-400">
+                {importCandidates.filter((c) => c.include).length} von {importCandidates.length} Buchungen ausgewählt — Kategorien prüfen und bei Bedarf anpassen.
+              </p>
+              <div className="max-h-80 overflow-y-auto space-y-1">
+                {importCandidates.map((c, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs py-1 border-b border-[#1f1f2e]/50 last:border-0">
+                    <input
+                      type="checkbox"
+                      checked={c.include}
+                      onChange={(e) => updateCandidate(i, { include: e.target.checked })}
+                      className="accent-cyan-500"
+                    />
+                    <span className="text-slate-500 font-mono w-20 flex-shrink-0">{c.date}</span>
+                    <span className="text-slate-400 flex-1 truncate">{c.description}</span>
+                    <select
+                      value={c.category}
+                      onChange={(e) => updateCandidate(i, { category: e.target.value })}
+                      className="bg-[#14141c] border border-[#1f1f2e] rounded px-1.5 py-1 text-slate-200 flex-shrink-0"
+                    >
+                      {CATEGORIES.map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                    <span className="text-slate-200 font-medium w-16 text-right flex-shrink-0">{fmt(c.amount)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2 justify-end pt-1">
+                <button
+                  onClick={() => setImportCandidates(null)}
+                  disabled={saving}
+                  className="px-3 py-2 rounded-lg text-xs text-slate-500 hover:text-slate-300 transition-colors disabled:opacity-40"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  onClick={handleImportConfirm}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-sm font-medium hover:bg-cyan-500/20 disabled:opacity-40 transition-all"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  {importCandidates.filter((c) => c.include).length} Einträge importieren
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Schnelleingabe */}
         <form onSubmit={handleAdd} className="card-base p-4 space-y-3">
