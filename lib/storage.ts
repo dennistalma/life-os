@@ -12,6 +12,7 @@ const defaultData: AppData = {
   social: [],
   notes: [],
   receipts: [],
+  privateExpenses: [],
 }
 
 // ── File-based storage (local dev) ──────────────────────────────────────────

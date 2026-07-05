@@ -103,6 +103,15 @@ export interface SocialAccount {
   recentPosts?: SocialPost[]
 }
 
+export interface PrivateExpense {
+  id: string
+  date: string
+  category: string
+  amount: number
+  note?: string
+  createdAt: string
+}
+
 export interface Note {
   id: string
   text: string
@@ -121,6 +130,7 @@ export interface AppData {
   social: SocialAccount[]
   notes: Note[]
   receipts: Receipt[]
+  privateExpenses: PrivateExpense[]
 }
 
 export interface CaptureResult {
