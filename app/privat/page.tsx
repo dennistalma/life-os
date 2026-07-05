@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { Trash2, Plus } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Trash2, Plus, ImagePlus, Loader2, AlertCircle } from 'lucide-react'
 import { PrivateExpense, AppData } from '@/lib/types'
 
 const fmt = (n: number) => n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
@@ -29,6 +29,19 @@ function today(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+function fileToBase64(file: File): Promise<{ base64: string; mediaType: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result as string
+      const base64 = result.split(',')[1] || ''
+      resolve({ base64, mediaType: file.type || 'image/jpeg' })
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
 export default function PrivatPage() {
   const [expenses, setExpenses] = useState<PrivateExpense[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -38,6 +51,12 @@ export default function PrivatPage() {
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const [scanning, setScanning] = useState(false)
+  const [scanError, setScanError] = useState('')
+  const [categoryPending, setCategoryPending] = useState(false)
+  const [dragActive, setDragActive] = useState(false)
+  const scanningRef = useRef(false)
 
   useEffect(() => {
     fetch('/api/data')
@@ -75,12 +94,73 @@ export default function PrivatPage() {
     await persist([entry, ...expenses])
     setAmount('')
     setNote('')
+    setCategoryPending(false)
     setSaving(false)
   }
 
   async function handleDelete(id: string) {
     await persist(expenses.filter((e) => e.id !== id))
   }
+
+  async function processScan(file: File) {
+    setScanning(true)
+    scanningRef.current = true
+    setScanError('')
+    try {
+      const { base64, mediaType } = await fileToBase64(file)
+      const res = await fetch('/api/privat/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, mediaType }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Fehler bei der Erkennung')
+
+      const extraction = json.extraction
+      setDate(extraction.date)
+      setAmount(String(extraction.amount).replace('.', ','))
+      setNote(extraction.note || '')
+      setCategory(extraction.category)
+      setCategoryPending(true)
+    } catch (err) {
+      setScanError(err instanceof Error ? err.message : 'Unbekannter Fehler')
+    } finally {
+      setScanning(false)
+      scanningRef.current = false
+    }
+  }
+
+  function handleScanFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) processScan(file)
+    e.target.value = ''
+  }
+
+  function handleScanDrop(e: React.DragEvent<HTMLLabelElement>) {
+    e.preventDefault()
+    setDragActive(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file && file.type.startsWith('image/')) processScan(file)
+  }
+
+  useEffect(() => {
+    function handlePaste(e: ClipboardEvent) {
+      if (scanningRef.current) return
+      const items = e.clipboardData?.items
+      if (!items) return
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile()
+          if (file) {
+            processScan(file)
+            break
+          }
+        }
+      }
+    }
+    document.addEventListener('paste', handlePaste)
+    return () => document.removeEventListener('paste', handlePaste)
+  }, [])
 
   const sorted = useMemo(
     () => [...expenses].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)),
@@ -118,8 +198,41 @@ export default function PrivatPage() {
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
         <h1 className="text-xl font-semibold text-slate-100">Private Ausgaben</h1>
 
+        {/* Screenshot-Scan */}
+        <label
+          onDragOver={(e) => { e.preventDefault(); setDragActive(true) }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={handleScanDrop}
+          className={`flex flex-col items-center justify-center gap-2 py-5 border border-dashed rounded-xl cursor-pointer transition-colors ${
+            dragActive ? 'border-orange-500/70 bg-orange-500/5' : 'border-[#2a2a3d] hover:border-orange-500/40'
+          }`}
+        >
+          {scanning ? (
+            <div className="flex items-center gap-2 text-sm text-orange-400">
+              <Loader2 className="w-4 h-4 animate-spin" /> Screenshot wird gelesen...
+            </div>
+          ) : (
+            <>
+              <ImagePlus className="w-5 h-5 text-slate-500" />
+              <span className="text-xs text-slate-500 text-center px-4">
+                Screenshot hierher ziehen, mit Strg+V einfügen oder klicken zum Hochladen
+              </span>
+            </>
+          )}
+          <input type="file" accept="image/*" onChange={handleScanFile} className="hidden" disabled={scanning} />
+        </label>
+
+        {scanError && (
+          <div className="flex items-center gap-2 text-sm text-red-400">
+            <AlertCircle className="w-4 h-4" /> {scanError}
+          </div>
+        )}
+
         {/* Schnelleingabe */}
         <form onSubmit={handleAdd} className="card-base p-4 space-y-3">
+          {categoryPending && (
+            <p className="text-xs text-amber-400">Aus Screenshot übernommen — bitte Kategorie prüfen.</p>
+          )}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="space-y-1">
               <label className="text-xs text-slate-500">Datum</label>
@@ -134,8 +247,10 @@ export default function PrivatPage() {
               <label className="text-xs text-slate-500">Kategorie</label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-[#14141c] border border-[#1f1f2e] rounded-lg px-2 py-1.5 text-sm text-slate-200"
+                onChange={(e) => { setCategory(e.target.value); setCategoryPending(false) }}
+                className={`w-full bg-[#14141c] border rounded-lg px-2 py-1.5 text-sm text-slate-200 ${
+                  categoryPending ? 'border-amber-500/60 ring-1 ring-amber-500/30' : 'border-[#1f1f2e]'
+                }`}
               >
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>{c}</option>
