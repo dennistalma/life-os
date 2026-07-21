@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
         description: extraction.note || input.trim(),
         amount: extraction.amount,
         type: 'expense',
-        category: 'Spirit Lens',
+        category: 'Spirit Lamps',
         date: extraction.date,
         createdAt: now,
       }

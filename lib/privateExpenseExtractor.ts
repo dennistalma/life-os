@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic()
 
-export const PRIVATE_EXPENSE_CATEGORIES = ['Benzin', 'Essen', 'Zigaretten', 'Freizeit', 'Kleidung', 'Sonstiges'] as const
+export const PRIVATE_EXPENSE_CATEGORIES = ['Red Bull', 'Benzin', 'Trinken', 'Tabak', 'Essen', 'Fixkosten', 'Sonstiges', 'SL'] as const
 
 export interface PrivateExpenseExtraction {
   date: string
@@ -21,7 +21,15 @@ Antworte NUR mit einem validen JSON-Objekt in diesem Format:
   "date": "<YYYY-MM-DD falls explizit im Text genannt (z.B. 'gestern', 'letzten Montag'), sonst null>",
   "confidence": <0.0-1.0, wie sicher du bei der Kategorie-Zuordnung bist>
 }
-Wähle die Kategorie nach bestem Ermessen (z.B. Tankstelle/Tanken/Benzin/Diesel -> Benzin; Essen/Trinken/Supermarkt/Restaurant/Snacks/Getränke -> Essen; Zigaretten/Tabak -> Zigaretten; Kino/Streaming/Sport/Ausgehen -> Freizeit; Kleidung/Schuhe -> Kleidung). Wenn unklar: Sonstiges.
+Wähle die Kategorie nach bestem Ermessen:
+- "Red Bull" -> Red Bull, Energy Drinks
+- "Benzin" -> Tankstelle, Tanken, Diesel, Sprit
+- "Trinken" -> sonstige Getränke (Wasser, Kaffee, Bier, Softdrinks außer Red Bull)
+- "Tabak" -> Zigaretten, Tabak, Vape
+- "Essen" -> Supermarkt, Restaurant, Lieferdienst, Snacks
+- "Fixkosten" -> Miete, Abos, Versicherung, Handyvertrag und ähnliche wiederkehrende Kosten
+- "SL" -> nur wenn explizit "SL" oder "Spirit Lamps" im Text vorkommt (Business-Ausgaben)
+- "Sonstiges" -> wenn nichts davon passt
 Wenn kein Datum im Text steht, setze "date" auf null (nicht raten).`
 
 export async function parsePrivateExpenseText(
