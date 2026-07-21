@@ -72,6 +72,55 @@ export async function extractPrivateExpense(
   }
 }
 
+const TEXT_SYSTEM_PROMPT = `Du liest kurze Freitext-Eingaben für private Ausgaben (kein Business), z.B. "Energy Drink 2€" oder "80€ Benzin tanken".
+Antworte NUR mit einem validen JSON-Objekt in diesem Format:
+{
+  "amount": <Betrag als Zahl, positiv>,
+  "note": "<kurze Notiz, z.B. was gekauft wurde>",
+  "category": "<eine von: ${PRIVATE_EXPENSE_CATEGORIES.join(', ')}>",
+  "date": "<YYYY-MM-DD falls explizit im Text genannt (z.B. 'gestern', 'letzten Montag'), sonst null>",
+  "confidence": <0.0-1.0, wie sicher du bei der Kategorie-Zuordnung bist>
+}
+Wähle die Kategorie nach bestem Ermessen (z.B. Tankstelle/Tanken/Benzin/Diesel -> Benzin; Essen/Trinken/Supermarkt/Restaurant/Snacks/Getränke -> Essen; Zigaretten/Tabak -> Zigaretten; Kino/Streaming/Sport/Ausgehen -> Freizeit; Kleidung/Schuhe -> Kleidung). Wenn unklar: Sonstiges.
+Wenn kein Datum im Text steht, setze "date" auf null (nicht raten).`
+
+export async function parsePrivateExpenseText(
+  input: string,
+  today: string
+): Promise<PrivateExpenseExtraction> {
+  const message = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 512,
+    system: TEXT_SYSTEM_PROMPT,
+    messages: [
+      {
+        role: 'user',
+        content: `Heutiges Datum: ${today}\nEingabe: "${input}"`,
+      },
+    ],
+  })
+
+  const text = message.content[0].type === 'text' ? message.content[0].text : ''
+  const jsonMatch = text.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) throw new Error('Konnte die Eingabe nicht verstehen')
+
+  const parsed = JSON.parse(jsonMatch[0])
+  const amount = Math.abs(Number(parsed.amount) || 0)
+  if (!amount) throw new Error('Kein Betrag erkannt')
+
+  const category = PRIVATE_EXPENSE_CATEGORIES.includes(parsed.category)
+    ? parsed.category
+    : 'Sonstiges'
+
+  return {
+    date: parsed.date || today,
+    amount,
+    note: parsed.note || input,
+    category,
+    confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.7,
+  }
+}
+
 const BATCH_SYSTEM_PROMPT = `Du ordnest Kontoauszug-Buchungstexte (private Ausgaben) einer Kategorie zu.
 Kategorien: ${PRIVATE_EXPENSE_CATEGORIES.join(', ')}
 Du bekommst eine JSON-Liste von Buchungsbeschreibungen. Antworte NUR mit einem validen JSON-Array gleicher Länge und Reihenfolge, ein Kategorie-String pro Eintrag, z.B.:

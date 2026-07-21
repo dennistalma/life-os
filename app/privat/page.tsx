@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Trash2, Plus, ImagePlus, Loader2, AlertCircle, FileUp, Check } from 'lucide-react'
+import { Trash2, Plus, ImagePlus, Loader2, AlertCircle, FileUp, Check, Sparkles, CheckCircle } from 'lucide-react'
 import { PrivateExpense, AppData } from '@/lib/types'
 
 interface ImportCandidate {
@@ -72,6 +72,11 @@ export default function PrivatPage() {
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState('')
 
+  const [captureInput, setCaptureInput] = useState('')
+  const [captureStatus, setCaptureStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [captureResult, setCaptureResult] = useState<{ category: string; amount: number; confidence: number } | null>(null)
+  const [captureError, setCaptureError] = useState('')
+
   useEffect(() => {
     fetch('/api/data')
       .then((r) => r.json())
@@ -114,6 +119,36 @@ export default function PrivatPage() {
 
   async function handleDelete(id: string) {
     await persist(expenses.filter((e) => e.id !== id))
+  }
+
+  async function handleCaptureSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!captureInput.trim() || captureStatus === 'loading') return
+    setCaptureStatus('loading')
+    setCaptureError('')
+    try {
+      const res = await fetch('/api/privat/capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: captureInput.trim() }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Fehler')
+
+      setExpenses((prev) => [json.entry, ...prev])
+      setCaptureResult({
+        category: json.entry.category,
+        amount: json.entry.amount,
+        confidence: json.extraction.confidence,
+      })
+      setCaptureInput('')
+      setCaptureStatus('success')
+      setTimeout(() => setCaptureStatus('idle'), 4000)
+    } catch (err) {
+      setCaptureError(err instanceof Error ? err.message : 'Unbekannter Fehler')
+      setCaptureStatus('error')
+      setTimeout(() => setCaptureStatus('idle'), 5000)
+    }
   }
 
   async function processScan(file: File) {
@@ -263,6 +298,73 @@ export default function PrivatPage() {
     <main className="min-h-screen bg-[#0a0a0f]">
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
         <h1 className="text-xl font-semibold text-slate-100">Private Ausgaben</h1>
+
+        {/* Schnellerfassung per Freitext */}
+        <div className="space-y-2">
+          <form onSubmit={handleCaptureSubmit} className="relative">
+            <div
+              className={`relative rounded-xl border transition-all duration-300 ${
+                captureStatus === 'loading'
+                  ? 'border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.2)]'
+                  : captureStatus === 'success'
+                  ? 'border-green-500/50 shadow-[0_0_25px_rgba(34,197,94,0.15)]'
+                  : captureStatus === 'error'
+                  ? 'border-red-500/50 shadow-[0_0_25px_rgba(239,68,68,0.15)]'
+                  : 'border-[#2a2a3d] hover:border-orange-500/40 focus-within:border-orange-500/60 focus-within:shadow-[0_0_25px_rgba(249,115,22,0.2)]'
+              } bg-[#16161f]`}
+            >
+              <div className="flex items-center gap-3 px-4 py-4">
+                <div className="flex-shrink-0">
+                  {captureStatus === 'loading' ? (
+                    <Loader2 className="w-5 h-5 text-cyan-400 animate-spin" />
+                  ) : captureStatus === 'success' ? (
+                    <CheckCircle className="w-5 h-5 text-green-400" />
+                  ) : captureStatus === 'error' ? (
+                    <AlertCircle className="w-5 h-5 text-red-400" />
+                  ) : (
+                    <Sparkles className="w-5 h-5 text-orange-400" />
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={captureInput}
+                  onChange={(e) => setCaptureInput(e.target.value)}
+                  placeholder="z.B. „80€ Benzin tanken“ oder „Energy Drink 2€“"
+                  disabled={captureStatus === 'loading'}
+                  className="flex-1 bg-transparent text-slate-100 placeholder-slate-600 text-base outline-none disabled:opacity-50 transition-colors"
+                />
+                <button
+                  type="submit"
+                  disabled={!captureInput.trim() || captureStatus === 'loading'}
+                  className="flex-shrink-0 px-4 py-2 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-400 text-sm font-medium hover:bg-orange-500/20 hover:border-orange-500/60 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                >
+                  {captureStatus === 'loading' ? 'Erfasse...' : 'Erfassen'}
+                </button>
+              </div>
+            </div>
+          </form>
+          <div className="min-h-[20px]">
+            {captureStatus === 'success' && captureResult && (
+              <div className="flex items-center gap-2 text-sm animate-in fade-in slide-in-from-top-1 duration-300">
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${categoryColor(captureResult.category)}`} />
+                <span className="text-slate-300 font-medium">{captureResult.category}</span>
+                <span className="text-slate-500">–</span>
+                <span className="text-slate-400">{fmt(captureResult.amount)}</span>
+                <span className="ml-auto text-slate-600 text-xs">
+                  {Math.round(captureResult.confidence * 100)}% sicher
+                </span>
+              </div>
+            )}
+            {captureStatus === 'error' && (
+              <div className="flex items-center gap-2 text-sm text-red-400">
+                <AlertCircle className="w-4 h-4" /> {captureError}
+              </div>
+            )}
+            {captureStatus === 'idle' && (
+              <p className="text-xs text-slate-600">Ohne Datumsangabe wird das heutige Datum verwendet.</p>
+            )}
+          </div>
+        </div>
 
         {/* Screenshot-Scan */}
         <label
