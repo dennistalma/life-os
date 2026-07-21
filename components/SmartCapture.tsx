@@ -26,6 +26,7 @@ const CATEGORY_LABELS: Record<Category, { label: string; color: string; emoji: s
   todo: { label: 'To-Do', color: 'text-amber-400', emoji: '✓' },
   calendar: { label: 'Kalender', color: 'text-cyan-400', emoji: '📅' },
   finance: { label: 'Finanzen', color: 'text-green-400', emoji: '€' },
+  privateExpense: { label: 'Private Ausgabe', color: 'text-pink-400', emoji: '💸' },
   habit: { label: 'Habit', color: 'text-purple-400', emoji: '🔄' },
   goal: { label: 'Ziel', color: 'text-orange-400', emoji: '🎯' },
 }
@@ -33,6 +34,7 @@ const CATEGORY_LABELS: Record<Category, { label: string; color: string; emoji: s
 const EXAMPLES = [
   'Morgen 14 Uhr Zahnarzt',
   '50€ für Holz ausgegeben',
+  '80€ Benzin tanken',
   'Jeden Tag 30 Min lesen',
   'Bis Ende Juli neue Website fertig',
   'Steuererklärung einreichen – hohe Priorität',

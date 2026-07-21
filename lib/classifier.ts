@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { CaptureResult, Category } from './types'
+import { PRIVATE_EXPENSE_CATEGORIES, PRIVATE_EXPENSE_CATEGORY_GUIDANCE } from './privateExpenseExtractor'
 
 const client = new Anthropic()
 
@@ -7,19 +8,23 @@ const SYSTEM_PROMPT = `Du bist ein intelligenter Assistent für ein persönliche
 Deine Aufgabe: Analysiere einen Freitext-Input und klassifiziere ihn in eine der folgenden Kategorien:
 - "todo": Aufgaben, die erledigt werden müssen (z.B. "Einkaufen gehen", "E-Mail beantworten")
 - "calendar": Termine, Meetings, Ereignisse mit Datum/Uhrzeit (z.B. "Morgen 14 Uhr Zahnarzt")
-- "finance": Einnahmen oder Ausgaben (z.B. "50€ für Holz ausgegeben", "500€ Gehalt erhalten")
+- "finance": Business-Einnahmen oder -Ausgaben, z.B. Material, Software, Kundenrechnungen, Gehalt (z.B. "50€ für Holz ausgegeben", "500€ Gehalt erhalten"). WICHTIG: Wenn "SL" oder "Spirit Lamps" im Text vorkommt, NIEMALS "finance" verwenden, sondern immer "privateExpense" (siehe unten) – auch wenn es inhaltlich eine Geschäftsausgabe ist.
+- "privateExpense": private, persönliche Alltagsausgaben (z.B. "Red Bull 2€", "80€ Benzin tanken", "Energy Drink 2€", "Zigaretten 8€"). Kategorie-Zuordnung:
+${PRIVATE_EXPENSE_CATEGORY_GUIDANCE}
+  Sonderregel: Sobald "SL" oder "Spirit Lamps" im Text vorkommt, IMMER category "SL" verwenden und IMMER als "privateExpense" klassifizieren (nie als "finance") – das System leitet SL-Ausgaben automatisch an die richtige Business-Buchhaltung weiter, das darfst du nicht selbst übernehmen.
 - "habit": Wiederkehrende tägliche/wöchentliche Gewohnheiten (z.B. "Jeden Tag 30 Min lesen")
 - "goal": Ziele mit Deadline oder Fortschritt (z.B. "Bis Ende Juli neue Website fertig")
 
 Antworte NUR mit einem validen JSON-Objekt in diesem Format:
 {
-  "category": "<todo|calendar|finance|habit|goal>",
+  "category": "<todo|calendar|finance|privateExpense|habit|goal>",
   "confidence": <0.0-1.0>,
   "reasoning": "<kurze Begründung auf Deutsch>",
   "data": {
     // Für todo: { "text": "...", "priority": "high|medium|low", "dueDate": "YYYY-MM-DD oder null" }
     // Für calendar: { "title": "...", "date": "YYYY-MM-DD", "time": "HH:MM oder null", "duration": <Dauer in Minuten oder null>, "description": "... oder null" }
     // Für finance: { "description": "...", "amount": <zahl>, "type": "income|expense", "category": "..." }
+    // Für privateExpense: { "amount": <zahl>, "note": "...", "category": "<eine von: ${PRIVATE_EXPENSE_CATEGORIES.join(', ')}>", "date": "YYYY-MM-DD falls explizit genannt, sonst null" }
     // Für habit: { "name": "...", "frequency": "daily|weekly" }
     // Für goal: { "title": "...", "description": "...", "deadline": "YYYY-MM-DD oder null", "timeframe": "week|month|quarter|year|custom", "target": <zahl oder null>, "unit": "... oder null" }
   }
@@ -82,6 +87,14 @@ export async function classifyInput(
       type: d.type || 'expense',
       category: d.category || 'Sonstiges',
       date: today,
+    }
+  } else if (category === 'privateExpense') {
+    finalData = {
+      ...base,
+      date: d.date || today,
+      category: (PRIVATE_EXPENSE_CATEGORIES as readonly string[]).includes(d.category) ? d.category : 'Sonstiges',
+      amount: Math.abs(Number(d.amount) || 0),
+      note: d.note || input,
     }
   } else if (category === 'habit') {
     finalData = {

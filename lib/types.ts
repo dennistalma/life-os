@@ -1,5 +1,5 @@
 export type Priority = 'high' | 'medium' | 'low'
-export type Category = 'todo' | 'calendar' | 'finance' | 'habit' | 'goal'
+export type Category = 'todo' | 'calendar' | 'finance' | 'habit' | 'goal' | 'privateExpense'
 
 export interface Todo {
   id: string
@@ -135,7 +135,7 @@ export interface AppData {
 
 export interface CaptureResult {
   category: Category
-  data: Todo | CalendarEvent | Transaction | Habit | Goal
+  data: Todo | CalendarEvent | Transaction | Habit | Goal | PrivateExpense
   confidence: number
   reasoning: string
 }

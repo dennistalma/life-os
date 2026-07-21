@@ -7,12 +7,14 @@ import { PrivateExpense, AppData } from '@/lib/types'
 const fmt = (n: number) => n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 
 const CATEGORY_COLORS: Record<string, string> = {
+  'Red Bull': 'bg-sky-400',
   Benzin: 'bg-orange-400',
+  Trinken: 'bg-cyan-400',
+  Tabak: 'bg-red-400',
   Essen: 'bg-green-400',
-  Zigaretten: 'bg-red-400',
-  Freizeit: 'bg-cyan-400',
-  Kleidung: 'bg-purple-400',
+  Fixkosten: 'bg-purple-400',
   Sonstiges: 'bg-slate-400',
+  SL: 'bg-yellow-400',
 }
 
 function categoryColor(cat: string): string {
@@ -33,7 +35,7 @@ export default function PrivatPage() {
 
   const [captureInput, setCaptureInput] = useState('')
   const [captureStatus, setCaptureStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
-  const [captureResult, setCaptureResult] = useState<{ category: string; amount: number; confidence: number } | null>(null)
+  const [captureResult, setCaptureResult] = useState<{ category: string; amount: number; confidence: number; addedToEur: boolean } | null>(null)
   const [captureError, setCaptureError] = useState('')
 
   useEffect(() => {
@@ -79,6 +81,7 @@ export default function PrivatPage() {
         category: json.entry.category,
         amount: json.entry.amount,
         confidence: json.extraction.confidence,
+        addedToEur: json.addedToEur,
       })
       setCaptureInput('')
       setCaptureStatus('success')
@@ -178,6 +181,9 @@ export default function PrivatPage() {
                 <span className="text-slate-300 font-medium">{captureResult.category}</span>
                 <span className="text-slate-500">–</span>
                 <span className="text-slate-400">{fmt(captureResult.amount)}</span>
+                {captureResult.addedToEur && (
+                  <span className="text-yellow-400 text-xs">· auch in EÜR-App eingetragen</span>
+                )}
                 <span className="ml-auto text-slate-600 text-xs">
                   {Math.round(captureResult.confidence * 100)}% sicher
                 </span>
