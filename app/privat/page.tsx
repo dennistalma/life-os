@@ -29,6 +29,23 @@ function today(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+function weekRange(dateStr: string): { start: string; end: string } {
+  const d = new Date(dateStr + 'T00:00:00Z')
+  const diffToMonday = (d.getUTCDay() + 6) % 7 // 0=Sun,1=Mon,... -> days since Monday
+  const monday = new Date(d)
+  monday.setUTCDate(d.getUTCDate() - diffToMonday)
+  const sunday = new Date(monday)
+  sunday.setUTCDate(monday.getUTCDate() + 6)
+  return { start: monday.toISOString().slice(0, 10), end: sunday.toISOString().slice(0, 10) }
+}
+
+function previousMonthKey(monthKeyStr: string): string {
+  const [y, m] = monthKeyStr.split('-').map(Number)
+  const d = new Date(Date.UTC(y, m - 1, 1))
+  d.setUTCMonth(d.getUTCMonth() - 1)
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
 export default function PrivatPage() {
   const [expenses, setExpenses] = useState<PrivateExpense[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -104,6 +121,22 @@ export default function PrivatPage() {
     () => expenses.filter((e) => monthKey(e.date) === currentMonth).reduce((s, e) => s + e.amount, 0),
     [expenses, currentMonth]
   )
+
+  const { start: weekStart, end: weekEnd } = useMemo(() => weekRange(today()), [])
+
+  const thisWeekTotal = useMemo(
+    () => expenses.filter((e) => e.date >= weekStart && e.date <= weekEnd).reduce((s, e) => s + e.amount, 0),
+    [expenses, weekStart, weekEnd]
+  )
+
+  const lastMonth = useMemo(() => previousMonthKey(currentMonth), [currentMonth])
+
+  const lastMonthTotal = useMemo(
+    () => expenses.filter((e) => monthKey(e.date) === lastMonth).reduce((s, e) => s + e.amount, 0),
+    [expenses, lastMonth]
+  )
+
+  const monthDeltaPct = lastMonthTotal > 0 ? Math.round(((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100) : null
 
   const byCategoryThisMonth = useMemo(() => {
     const map = new Map<string, number>()
@@ -201,10 +234,22 @@ export default function PrivatPage() {
         </div>
 
         {/* Monatsübersicht */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="card-base p-4 space-y-1">
+            <p className="text-xs text-slate-500">Diese Woche</p>
+            <p className="text-xl font-semibold text-orange-400">{fmt(thisWeekTotal)}</p>
+          </div>
           <div className="card-base p-4 space-y-1">
             <p className="text-xs text-slate-500">Diesen Monat gesamt</p>
             <p className="text-xl font-semibold text-orange-400">{fmt(thisMonthTotal)}</p>
+            {lastMonthTotal > 0 && monthDeltaPct !== null && (
+              <p className="text-xs text-slate-500">
+                Vormonat {fmt(lastMonthTotal)} ·{' '}
+                <span className={monthDeltaPct > 0 ? 'text-red-400' : monthDeltaPct < 0 ? 'text-green-400' : 'text-slate-500'}>
+                  {monthDeltaPct > 0 ? '+' : ''}{monthDeltaPct}%
+                </span>
+              </p>
+            )}
           </div>
           <div className="card-base p-4 space-y-2">
             <p className="text-xs text-slate-500 mb-1">Nach Kategorie (dieser Monat)</p>
