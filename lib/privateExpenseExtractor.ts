@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic()
 
-export const PRIVATE_EXPENSE_CATEGORIES = ['Red Bull', 'Benzin', 'Trinken', 'Tabak', 'Essen', 'Fixkosten', 'Sonstiges', 'SL'] as const
+export const PRIVATE_EXPENSE_CATEGORIES = ['Red Bull', 'Benzin', 'Trinken', 'Tabak', 'Essen', 'Fixkosten', 'Poker', 'Sonstiges', 'SL'] as const
 
 // Shared between the dedicated private-capture prompt and the dashboard's
 // general classifier, so both agree on the same category regardless of
@@ -13,6 +13,7 @@ export const PRIVATE_EXPENSE_CATEGORY_GUIDANCE = `- "Red Bull" -> Red Bull, Ener
 - "Tabak" -> Zigaretten, Tabak, Vape
 - "Essen" -> Supermarkt, Restaurant, Lieferdienst, Snacks
 - "Fixkosten" -> Miete, Abos, Versicherung, Handyvertrag und ähnliche wiederkehrende Kosten
+- "Poker" -> Poker, Casino, Buy-in, Cashgame, Wetten
 - "SL" -> nur wenn explizit "SL" oder "Spirit Lamps" im Text vorkommt (Business-Ausgaben, werden automatisch weitergeleitet)
 - "Sonstiges" -> wenn nichts davon passt`
 

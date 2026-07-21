@@ -13,6 +13,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   Tabak: 'bg-red-400',
   Essen: 'bg-green-400',
   Fixkosten: 'bg-purple-400',
+  Poker: 'bg-emerald-400',
   Sonstiges: 'bg-slate-400',
   SL: 'bg-yellow-400',
 }
