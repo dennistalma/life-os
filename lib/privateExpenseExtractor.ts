@@ -14,7 +14,7 @@ export const PRIVATE_EXPENSE_CATEGORY_GUIDANCE = `- "Red Bull" -> Red Bull, Ener
 - "Essen" -> Supermarkt, Restaurant, Lieferdienst, Snacks
 - "Fixkosten" -> Miete, Abos, Versicherung, Handyvertrag und ähnliche wiederkehrende Kosten
 - "Poker" -> Poker, Casino, Buy-in, Cashgame, Wetten
-- "SL" -> nur wenn explizit "SL" oder "Spirit Lamps" im Text vorkommt (Business-Ausgaben, werden automatisch weitergeleitet)
+- "SL" -> nur wenn explizit "SL" oder "Spirit Lamps" im Text vorkommt
 - "Sonstiges" -> wenn nichts davon passt`
 
 export interface PrivateExpenseExtraction {

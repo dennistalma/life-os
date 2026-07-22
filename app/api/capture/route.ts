@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { classifyInput } from '@/lib/classifier'
 import { parsePrivateExpenseText } from '@/lib/privateExpenseExtractor'
 import { updateDataAsync } from '@/lib/storage'
-import { addToEurApp } from '@/lib/eurSync'
-import { Category, CaptureResult, PrivateExpense, Transaction } from '@/lib/types'
+import { Category, CaptureResult, PrivateExpense } from '@/lib/types'
 
 export async function POST(req: NextRequest) {
   try {
@@ -51,24 +50,7 @@ export async function POST(req: NextRequest) {
       return data
     })
 
-    let addedToEur = false
-    if (result.category === 'privateExpense') {
-      const expense = result.data as PrivateExpense
-      if (expense.category === 'SL') {
-        const transaction: Transaction = {
-          id: crypto.randomUUID(),
-          description: expense.note || trimmed,
-          amount: expense.amount,
-          type: 'expense',
-          category: 'Spirit Lamps',
-          date: expense.date,
-          createdAt: new Date().toISOString(),
-        }
-        addedToEur = await addToEurApp(transaction)
-      }
-    }
-
-    return NextResponse.json({ result: result as CaptureResult, addedToEur, data: updatedData })
+    return NextResponse.json({ result: result as CaptureResult, data: updatedData })
   } catch (err) {
     console.error('Capture error:', err)
     return NextResponse.json(

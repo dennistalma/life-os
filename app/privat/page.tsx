@@ -66,7 +66,7 @@ export default function PrivatPage() {
 
   const [captureInput, setCaptureInput] = useState('')
   const [captureStatus, setCaptureStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
-  const [captureResult, setCaptureResult] = useState<{ category: string; amount: number; confidence: number; addedToEur: boolean } | null>(null)
+  const [captureResult, setCaptureResult] = useState<{ category: string; amount: number; confidence: number } | null>(null)
   const [captureError, setCaptureError] = useState('')
   const [dragActive, setDragActive] = useState(false)
   const [pendingImage, setPendingImage] = useState<{ base64: string; mediaType: string; previewUrl: string } | null>(null)
@@ -121,7 +121,6 @@ export default function PrivatPage() {
         category: json.entry.category,
         amount: json.entry.amount,
         confidence: json.extraction.confidence,
-        addedToEur: json.addedToEur,
       })
       setCaptureInput('')
       clearPendingImage()
@@ -313,9 +312,6 @@ export default function PrivatPage() {
                 <span className="text-slate-300 font-medium">{captureResult.category}</span>
                 <span className="text-slate-500">–</span>
                 <span className="text-slate-400">{fmt(captureResult.amount)}</span>
-                {captureResult.addedToEur && (
-                  <span className="text-yellow-400 text-xs">· auch in EÜR-App eingetragen</span>
-                )}
                 <span className="ml-auto text-slate-600 text-xs">
                   {Math.round(captureResult.confidence * 100)}% sicher
                 </span>

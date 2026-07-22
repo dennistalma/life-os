@@ -8,10 +8,9 @@ const SYSTEM_PROMPT = `Du bist ein intelligenter Assistent für ein persönliche
 Deine Aufgabe: Analysiere einen Freitext-Input und klassifiziere ihn in eine der folgenden Kategorien:
 - "todo": Aufgaben, die erledigt werden müssen (z.B. "Einkaufen gehen", "E-Mail beantworten")
 - "calendar": Termine, Meetings, Ereignisse mit Datum/Uhrzeit (z.B. "Morgen 14 Uhr Zahnarzt")
-- "finance": Business-Einnahmen oder -Ausgaben, z.B. Material, Software, Kundenrechnungen, Gehalt (z.B. "50€ für Holz ausgegeben", "500€ Gehalt erhalten"). WICHTIG: Wenn "SL" oder "Spirit Lamps" im Text vorkommt, NIEMALS "finance" verwenden, sondern immer "privateExpense" (siehe unten) – auch wenn es inhaltlich eine Geschäftsausgabe ist.
+- "finance": Business-Einnahmen oder -Ausgaben, z.B. Material, Software, Kundenrechnungen, Gehalt (z.B. "50€ für Holz ausgegeben", "500€ Gehalt erhalten")
 - "privateExpense": private, persönliche Alltagsausgaben (z.B. "Red Bull 2€", "80€ Benzin tanken", "Energy Drink 2€", "Zigaretten 8€"). Kategorie-Zuordnung:
 ${PRIVATE_EXPENSE_CATEGORY_GUIDANCE}
-  Sonderregel: Sobald "SL" oder "Spirit Lamps" im Text vorkommt, IMMER category "SL" verwenden und IMMER als "privateExpense" klassifizieren (nie als "finance") – das System leitet SL-Ausgaben automatisch an die richtige Business-Buchhaltung weiter, das darfst du nicht selbst übernehmen.
 - "habit": Wiederkehrende tägliche/wöchentliche Gewohnheiten (z.B. "Jeden Tag 30 Min lesen")
 - "goal": Ziele mit Deadline oder Fortschritt (z.B. "Bis Ende Juli neue Website fertig")
 

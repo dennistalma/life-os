@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { parsePrivateExpenseText, extractPrivateExpenseImage, PrivateExpenseExtraction } from '@/lib/privateExpenseExtractor'
 import { updateDataAsync } from '@/lib/storage'
-import { addToEurApp } from '@/lib/eurSync'
-import { PrivateExpense, Transaction } from '@/lib/types'
+import { PrivateExpense } from '@/lib/types'
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,18 +11,13 @@ export async function POST(req: NextRequest) {
     const note = typeof input === 'string' ? input.trim() : ''
 
     let extraction: PrivateExpenseExtraction
-    let fallbackNote: string
     if (typeof imageBase64 === 'string' && imageBase64) {
       extraction = await extractPrivateExpenseImage(imageBase64, mediaType || 'image/png', today, note || undefined)
-      fallbackNote = extraction.note || note || 'Screenshot'
     } else if (note) {
       extraction = await parsePrivateExpenseText(note, today)
-      fallbackNote = note
     } else {
       return NextResponse.json({ error: 'Keine Eingabe angegeben' }, { status: 400 })
     }
-
-    const now = new Date().toISOString()
 
     const entry: PrivateExpense = {
       id: crypto.randomUUID(),
@@ -31,7 +25,7 @@ export async function POST(req: NextRequest) {
       category: extraction.category,
       amount: extraction.amount,
       note: extraction.note || undefined,
-      createdAt: now,
+      createdAt: new Date().toISOString(),
     }
 
     const updatedData = await updateDataAsync((data) => {
@@ -39,21 +33,7 @@ export async function POST(req: NextRequest) {
       return data
     })
 
-    let addedToEur = false
-    if (extraction.category === 'SL') {
-      const transaction: Transaction = {
-        id: crypto.randomUUID(),
-        description: extraction.note || fallbackNote,
-        amount: extraction.amount,
-        type: 'expense',
-        category: 'Spirit Lamps',
-        date: extraction.date,
-        createdAt: now,
-      }
-      addedToEur = await addToEurApp(transaction)
-    }
-
-    return NextResponse.json({ entry, extraction, addedToEur, data: updatedData })
+    return NextResponse.json({ entry, extraction, data: updatedData })
   } catch (err) {
     console.error('Private expense capture error:', err)
     return NextResponse.json(
