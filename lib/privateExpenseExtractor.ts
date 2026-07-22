@@ -85,12 +85,14 @@ Antworte NUR mit einem validen JSON-Objekt in diesem Format:
   "confidence": <0.0-1.0, wie sicher du bei der Kategorie-Zuordnung bist>
 }
 Wähle die Kategorie nach bestem Ermessen:
-${PRIVATE_EXPENSE_CATEGORY_GUIDANCE}`
+${PRIVATE_EXPENSE_CATEGORY_GUIDANCE}
+Falls der Nutzer einen zusätzlichen Hinweis mitgibt (z.B. zur Kategorie oder was der Beleg ist), berücksichtige ihn und lass ihn ggf. in die Notiz einfließen.`
 
 export async function extractPrivateExpenseImage(
   imageBase64: string,
   mediaType: string,
-  today: string
+  today: string,
+  context?: string
 ): Promise<PrivateExpenseExtraction> {
   const message = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
@@ -110,7 +112,7 @@ export async function extractPrivateExpenseImage(
           },
           {
             type: 'text',
-            text: `Heutiges Datum: ${today}. Lies diesen Beleg aus.`,
+            text: `Heutiges Datum: ${today}.${context ? ` Zusätzlicher Hinweis vom Nutzer: "${context}"` : ''} Lies diesen Beleg aus.`,
           },
         ],
       },

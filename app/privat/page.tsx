@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Trash2, Loader2, AlertCircle, Sparkles, CheckCircle } from 'lucide-react'
+import { Trash2, Loader2, AlertCircle, Sparkles, CheckCircle, X } from 'lucide-react'
 import { PrivateExpense, AppData } from '@/lib/types'
 
 function fileToBase64(file: File): Promise<{ base64: string; mediaType: string }> {
@@ -69,6 +69,7 @@ export default function PrivatPage() {
   const [captureResult, setCaptureResult] = useState<{ category: string; amount: number; confidence: number; addedToEur: boolean } | null>(null)
   const [captureError, setCaptureError] = useState('')
   const [dragActive, setDragActive] = useState(false)
+  const [pendingImage, setPendingImage] = useState<{ base64: string; mediaType: string; previewUrl: string } | null>(null)
   const captureStatusRef = useRef(captureStatus)
   captureStatusRef.current = captureStatus
 
@@ -96,7 +97,14 @@ export default function PrivatPage() {
     await persist(expenses.filter((e) => e.id !== id))
   }
 
-  async function submitCapture(body: { input: string } | { imageBase64: string; mediaType: string }) {
+  async function submitCapture() {
+    const body: { input?: string; imageBase64?: string; mediaType?: string } = {}
+    if (captureInput.trim()) body.input = captureInput.trim()
+    if (pendingImage) {
+      body.imageBase64 = pendingImage.base64
+      body.mediaType = pendingImage.mediaType
+    }
+
     setCaptureStatus('loading')
     setCaptureError('')
     try {
@@ -116,6 +124,7 @@ export default function PrivatPage() {
         addedToEur: json.addedToEur,
       })
       setCaptureInput('')
+      clearPendingImage()
       setCaptureStatus('success')
       setTimeout(() => setCaptureStatus('idle'), 4000)
     } catch (err) {
@@ -127,21 +136,31 @@ export default function PrivatPage() {
 
   function handleCaptureSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!captureInput.trim() || captureStatus === 'loading') return
-    submitCapture({ input: captureInput.trim() })
+    if ((!captureInput.trim() && !pendingImage) || captureStatus === 'loading') return
+    submitCapture()
   }
 
-  async function handleImageCapture(file: File) {
+  function clearPendingImage() {
+    setPendingImage((prev) => {
+      if (prev) URL.revokeObjectURL(prev.previewUrl)
+      return null
+    })
+  }
+
+  async function attachImage(file: File) {
     if (captureStatusRef.current === 'loading') return
     const { base64, mediaType } = await fileToBase64(file)
-    await submitCapture({ imageBase64: base64, mediaType })
+    setPendingImage((prev) => {
+      if (prev) URL.revokeObjectURL(prev.previewUrl)
+      return { base64, mediaType, previewUrl: URL.createObjectURL(file) }
+    })
   }
 
   function handleDrop(e: React.DragEvent<HTMLFormElement>) {
     e.preventDefault()
     setDragActive(false)
     const file = e.dataTransfer.files?.[0]
-    if (file && file.type.startsWith('image/')) handleImageCapture(file)
+    if (file && file.type.startsWith('image/')) attachImage(file)
   }
 
   useEffect(() => {
@@ -154,7 +173,7 @@ export default function PrivatPage() {
           const file = item.getAsFile()
           if (file) {
             e.preventDefault()
-            handleImageCapture(file)
+            attachImage(file)
             break
           }
         }
@@ -250,18 +269,36 @@ export default function PrivatPage() {
                     <Sparkles className="w-5 h-5 text-orange-400" />
                   )}
                 </div>
+                {pendingImage && (
+                  <div className="relative flex-shrink-0">
+                    <img src={pendingImage.previewUrl} alt="Screenshot" className="w-9 h-9 object-cover rounded-lg border border-[#2a2a3d]" />
+                    <button
+                      type="button"
+                      onClick={clearPendingImage}
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[#0a0a0f] border border-[#2a2a3d] flex items-center justify-center text-slate-500 hover:text-red-400"
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                )}
                 <input
                   type="text"
                   value={captureInput}
                   onChange={(e) => setCaptureInput(e.target.value)}
-                  placeholder={dragActive ? 'Screenshot hier loslassen…' : 'z.B. „80€ Benzin tanken“, „Energy Drink 2€“ oder Screenshot einfügen (Strg+V)'}
+                  placeholder={
+                    dragActive
+                      ? 'Screenshot hier loslassen…'
+                      : pendingImage
+                      ? 'Optional: Notiz zum Screenshot ergänzen…'
+                      : 'z.B. „80€ Benzin tanken“, „Energy Drink 2€“ oder Screenshot einfügen (Strg+V)'
+                  }
                   disabled={captureStatus === 'loading'}
                   className="flex-1 bg-transparent text-slate-100 placeholder-slate-600 text-base outline-none disabled:opacity-50 transition-colors"
                   autoFocus
                 />
                 <button
                   type="submit"
-                  disabled={!captureInput.trim() || captureStatus === 'loading'}
+                  disabled={(!captureInput.trim() && !pendingImage) || captureStatus === 'loading'}
                   className="flex-shrink-0 px-4 py-2 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-400 text-sm font-medium hover:bg-orange-500/20 hover:border-orange-500/60 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
                   {captureStatus === 'loading' ? 'Erfasse...' : 'Erfassen'}

@@ -9,14 +9,16 @@ export async function POST(req: NextRequest) {
     const { input, imageBase64, mediaType } = await req.json()
     const today = new Date().toISOString().split('T')[0]
 
+    const note = typeof input === 'string' ? input.trim() : ''
+
     let extraction: PrivateExpenseExtraction
     let fallbackNote: string
     if (typeof imageBase64 === 'string' && imageBase64) {
-      extraction = await extractPrivateExpenseImage(imageBase64, mediaType || 'image/png', today)
-      fallbackNote = extraction.note || 'Screenshot'
-    } else if (typeof input === 'string' && input.trim()) {
-      extraction = await parsePrivateExpenseText(input.trim(), today)
-      fallbackNote = input.trim()
+      extraction = await extractPrivateExpenseImage(imageBase64, mediaType || 'image/png', today, note || undefined)
+      fallbackNote = extraction.note || note || 'Screenshot'
+    } else if (note) {
+      extraction = await parsePrivateExpenseText(note, today)
+      fallbackNote = note
     } else {
       return NextResponse.json({ error: 'Keine Eingabe angegeben' }, { status: 400 })
     }
