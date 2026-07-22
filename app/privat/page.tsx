@@ -35,6 +35,22 @@ function categoryColor(cat: string): string {
   return CATEGORY_COLORS[cat] ?? 'bg-slate-400'
 }
 
+const CATEGORY_ROW_BG: Record<string, string> = {
+  'Red Bull': 'bg-sky-500/10',
+  Benzin: 'bg-orange-500/10',
+  Trinken: 'bg-cyan-500/10',
+  Tabak: 'bg-red-500/10',
+  Essen: 'bg-green-500/10',
+  Fixkosten: 'bg-purple-500/10',
+  Poker: 'bg-emerald-500/10',
+  Sonstiges: 'bg-slate-500/10',
+  SL: 'bg-yellow-500/10',
+}
+
+function categoryRowBg(cat: string): string {
+  return CATEGORY_ROW_BG[cat] ?? 'bg-slate-500/10'
+}
+
 function monthKey(dateStr: string): string {
   return dateStr.slice(0, 7)
 }
@@ -396,7 +412,7 @@ export default function PrivatPage() {
               {sorted.map((e) => (
                 <div
                   key={e.id}
-                  className="flex items-center gap-3 text-sm py-1.5 border-b border-[#1f1f2e]/50 last:border-0 group"
+                  className={`flex items-center gap-3 text-sm py-1.5 px-3 rounded-lg group ${categoryRowBg(e.category)}`}
                 >
                   <span className="text-slate-500 font-mono text-xs w-20">{e.date}</span>
                   <span className={`w-2 h-2 rounded-full flex-shrink-0 ${categoryColor(e.category)}`} />
