@@ -1,8 +1,21 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Trash2, Loader2, AlertCircle, Sparkles, CheckCircle } from 'lucide-react'
 import { PrivateExpense, AppData } from '@/lib/types'
+
+function fileToBase64(file: File): Promise<{ base64: string; mediaType: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result as string
+      const base64 = result.split(',')[1] || ''
+      resolve({ base64, mediaType: file.type || 'image/png' })
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
 
 const fmt = (n: number) => n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 
@@ -55,6 +68,9 @@ export default function PrivatPage() {
   const [captureStatus, setCaptureStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [captureResult, setCaptureResult] = useState<{ category: string; amount: number; confidence: number; addedToEur: boolean } | null>(null)
   const [captureError, setCaptureError] = useState('')
+  const [dragActive, setDragActive] = useState(false)
+  const captureStatusRef = useRef(captureStatus)
+  captureStatusRef.current = captureStatus
 
   useEffect(() => {
     fetch('/api/data')
@@ -80,16 +96,14 @@ export default function PrivatPage() {
     await persist(expenses.filter((e) => e.id !== id))
   }
 
-  async function handleCaptureSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!captureInput.trim() || captureStatus === 'loading') return
+  async function submitCapture(body: { input: string } | { imageBase64: string; mediaType: string }) {
     setCaptureStatus('loading')
     setCaptureError('')
     try {
       const res = await fetch('/api/privat/capture', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input: captureInput.trim() }),
+        body: JSON.stringify(body),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Fehler')
@@ -110,6 +124,45 @@ export default function PrivatPage() {
       setTimeout(() => setCaptureStatus('idle'), 5000)
     }
   }
+
+  function handleCaptureSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!captureInput.trim() || captureStatus === 'loading') return
+    submitCapture({ input: captureInput.trim() })
+  }
+
+  async function handleImageCapture(file: File) {
+    if (captureStatusRef.current === 'loading') return
+    const { base64, mediaType } = await fileToBase64(file)
+    await submitCapture({ imageBase64: base64, mediaType })
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setDragActive(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file && file.type.startsWith('image/')) handleImageCapture(file)
+  }
+
+  useEffect(() => {
+    function handlePaste(e: ClipboardEvent) {
+      if (captureStatusRef.current === 'loading') return
+      const items = e.clipboardData?.items
+      if (!items) return
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile()
+          if (file) {
+            e.preventDefault()
+            handleImageCapture(file)
+            break
+          }
+        }
+      }
+    }
+    document.addEventListener('paste', handlePaste)
+    return () => document.removeEventListener('paste', handlePaste)
+  }, [])
 
   const sorted = useMemo(
     () => [...expenses].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)),
@@ -165,17 +218,25 @@ export default function PrivatPage() {
 
         {/* Schnellerfassung per Freitext */}
         <div className="space-y-2">
-          <form onSubmit={handleCaptureSubmit} className="relative">
+          <form
+            onSubmit={handleCaptureSubmit}
+            onDragOver={(e) => { e.preventDefault(); setDragActive(true) }}
+            onDragLeave={() => setDragActive(false)}
+            onDrop={handleDrop}
+            className="relative"
+          >
             <div
               className={`relative rounded-xl border transition-all duration-300 ${
-                captureStatus === 'loading'
+                dragActive
+                  ? 'border-orange-500/70 bg-orange-500/5'
+                  : captureStatus === 'loading'
                   ? 'border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.2)]'
                   : captureStatus === 'success'
                   ? 'border-green-500/50 shadow-[0_0_25px_rgba(34,197,94,0.15)]'
                   : captureStatus === 'error'
                   ? 'border-red-500/50 shadow-[0_0_25px_rgba(239,68,68,0.15)]'
                   : 'border-[#2a2a3d] hover:border-orange-500/40 focus-within:border-orange-500/60 focus-within:shadow-[0_0_25px_rgba(249,115,22,0.2)]'
-              } bg-[#16161f]`}
+              } ${dragActive ? '' : 'bg-[#16161f]'}`}
             >
               <div className="flex items-center gap-3 px-4 py-4">
                 <div className="flex-shrink-0">
@@ -193,7 +254,7 @@ export default function PrivatPage() {
                   type="text"
                   value={captureInput}
                   onChange={(e) => setCaptureInput(e.target.value)}
-                  placeholder="z.B. „80€ Benzin tanken“ oder „Energy Drink 2€“"
+                  placeholder={dragActive ? 'Screenshot hier loslassen…' : 'z.B. „80€ Benzin tanken“, „Energy Drink 2€“ oder Screenshot einfügen (Strg+V)'}
                   disabled={captureStatus === 'loading'}
                   className="flex-1 bg-transparent text-slate-100 placeholder-slate-600 text-base outline-none disabled:opacity-50 transition-colors"
                   autoFocus

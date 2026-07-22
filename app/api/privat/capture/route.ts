@@ -1,18 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { parsePrivateExpenseText } from '@/lib/privateExpenseExtractor'
+import { parsePrivateExpenseText, extractPrivateExpenseImage, PrivateExpenseExtraction } from '@/lib/privateExpenseExtractor'
 import { updateDataAsync } from '@/lib/storage'
 import { addToEurApp } from '@/lib/eurSync'
 import { PrivateExpense, Transaction } from '@/lib/types'
 
 export async function POST(req: NextRequest) {
   try {
-    const { input } = await req.json()
-    if (typeof input !== 'string' || !input.trim()) {
+    const { input, imageBase64, mediaType } = await req.json()
+    const today = new Date().toISOString().split('T')[0]
+
+    let extraction: PrivateExpenseExtraction
+    let fallbackNote: string
+    if (typeof imageBase64 === 'string' && imageBase64) {
+      extraction = await extractPrivateExpenseImage(imageBase64, mediaType || 'image/png', today)
+      fallbackNote = extraction.note || 'Screenshot'
+    } else if (typeof input === 'string' && input.trim()) {
+      extraction = await parsePrivateExpenseText(input.trim(), today)
+      fallbackNote = input.trim()
+    } else {
       return NextResponse.json({ error: 'Keine Eingabe angegeben' }, { status: 400 })
     }
 
-    const today = new Date().toISOString().split('T')[0]
-    const extraction = await parsePrivateExpenseText(input.trim(), today)
     const now = new Date().toISOString()
 
     const entry: PrivateExpense = {
@@ -33,7 +41,7 @@ export async function POST(req: NextRequest) {
     if (extraction.category === 'SL') {
       const transaction: Transaction = {
         id: crypto.randomUUID(),
-        description: extraction.note || input.trim(),
+        description: extraction.note || fallbackNote,
         amount: extraction.amount,
         type: 'expense',
         category: 'Spirit Lamps',

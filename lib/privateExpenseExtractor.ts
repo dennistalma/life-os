@@ -74,3 +74,66 @@ export async function parsePrivateExpenseText(
     confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.7,
   }
 }
+
+const IMAGE_SYSTEM_PROMPT = `Du liest Screenshots von Belegen, Kassenbons oder Zahlungsbestätigungen für private Ausgaben (kein Business).
+Antworte NUR mit einem validen JSON-Objekt in diesem Format:
+{
+  "amount": <Betrag als Zahl, positiv>,
+  "note": "<kurze Notiz, z.B. Händlername oder was gekauft wurde>",
+  "category": "<eine von: ${PRIVATE_EXPENSE_CATEGORIES.join(', ')}>",
+  "date": "<Datum als YYYY-MM-DD, falls nicht erkennbar heutiges Datum>",
+  "confidence": <0.0-1.0, wie sicher du bei der Kategorie-Zuordnung bist>
+}
+Wähle die Kategorie nach bestem Ermessen:
+${PRIVATE_EXPENSE_CATEGORY_GUIDANCE}`
+
+export async function extractPrivateExpenseImage(
+  imageBase64: string,
+  mediaType: string,
+  today: string
+): Promise<PrivateExpenseExtraction> {
+  const message = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 512,
+    system: IMAGE_SYSTEM_PROMPT,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: mediaType as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif',
+              data: imageBase64,
+            },
+          },
+          {
+            type: 'text',
+            text: `Heutiges Datum: ${today}. Lies diesen Beleg aus.`,
+          },
+        ],
+      },
+    ],
+  })
+
+  const text = message.content[0].type === 'text' ? message.content[0].text : ''
+  const jsonMatch = text.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) throw new Error('Konnte keine Daten aus dem Bild lesen')
+
+  const parsed = JSON.parse(jsonMatch[0])
+  const amount = Math.abs(Number(parsed.amount) || 0)
+  if (!amount) throw new Error('Kein Betrag erkannt')
+
+  const category = PRIVATE_EXPENSE_CATEGORIES.includes(parsed.category)
+    ? parsed.category
+    : 'Sonstiges'
+
+  return {
+    date: parsed.date || today,
+    amount,
+    note: parsed.note || '',
+    category,
+    confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.6,
+  }
+}
