@@ -36,15 +36,15 @@ function categoryColor(cat: string): string {
 }
 
 const CATEGORY_ROW_BG: Record<string, string> = {
-  'Red Bull': 'bg-sky-500/10',
-  Benzin: 'bg-orange-500/10',
-  Trinken: 'bg-cyan-500/10',
-  Tabak: 'bg-red-500/10',
-  Essen: 'bg-green-500/10',
-  Fixkosten: 'bg-purple-500/10',
-  Poker: 'bg-emerald-500/10',
-  Sonstiges: 'bg-slate-500/10',
-  SL: 'bg-yellow-500/10',
+  'Red Bull': 'bg-sky-500/30',
+  Benzin: 'bg-orange-500/30',
+  Trinken: 'bg-cyan-500/30',
+  Tabak: 'bg-red-500/30',
+  Essen: 'bg-green-500/30',
+  Fixkosten: 'bg-purple-500/30',
+  Poker: 'bg-emerald-500/30',
+  Sonstiges: 'bg-slate-500/30',
+  SL: 'bg-yellow-500/30',
 }
 
 function categoryRowBg(cat: string): string {
@@ -414,10 +414,10 @@ export default function PrivatPage() {
                   key={e.id}
                   className={`flex items-center gap-3 text-sm py-1.5 px-3 rounded-lg group ${categoryRowBg(e.category)}`}
                 >
-                  <span className="text-slate-500 font-mono text-xs w-20">{e.date}</span>
+                  <span className="text-slate-200 font-medium font-mono text-xs w-20">{e.date}</span>
                   <span className={`w-2 h-2 rounded-full flex-shrink-0 ${categoryColor(e.category)}`} />
-                  <span className="text-slate-400 w-24 truncate">{e.category}</span>
-                  <span className="text-slate-500 flex-1 truncate text-xs">{e.note ?? ''}</span>
+                  <span className="text-slate-200 font-medium w-24 truncate">{e.category}</span>
+                  <span className="text-slate-200 font-medium flex-1 truncate text-xs">{e.note ?? ''}</span>
                   <span className="text-slate-200 font-medium">{fmt(e.amount)}</span>
                   <button
                     onClick={() => handleDelete(e.id)}
